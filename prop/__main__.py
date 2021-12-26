@@ -751,7 +751,7 @@ $ sudo service tor start
 Outputs only status code, redirect history, cookie information, response header information
 If you have specified this option and want to output to a file, use> (redirect) instead of the -o option.
 
--s, --search-words
+-s, --search-words [words]
 Extracts and outputs the code such as the specified tag, class, id, etc. from the source code of the site
 If you specify more than one, separate them with % (don't use a space)
 Example of use
@@ -884,8 +884,8 @@ If you specify a URL when you specify this option, an error will occur.
 
 The default HTML parser is html.parser, but you can also use an external parser
 When using lxml
-(1) Enter pip install lxml to install lxml
-(2) Change the value of "parser" in ./proprc.json as follows
+(1) Enter "pip install lxml" to install lxml
+(2) Change the value of "parser" in {config_file} as follows
 {
     "parser": "lxml"
 }
@@ -931,7 +931,7 @@ The options that can be changed are as follows
     "torpath": null,
     "save_robots": true // this recommended to specify true
 }
-""".replace("{config_file}", setting.config_file))
+""".replace("{config_file}", setting.config_file).replace("{log_file}", setting.log_file))
 
 def conversion_arg(args: List[str]) -> list:
     result: list = []
