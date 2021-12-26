@@ -1,6 +1,11 @@
 # 何ができるの
 ファイルの再帰ダウンロードやhtmlから特定のタグなどを抽出することができます
 
+# インストール
+```bash
+$ pip install git+https://github.com/mino-38/prop
+```
+
 # 基本的な使い方
 ```bash
 $ prop [options] URL
@@ -14,6 +19,10 @@ $ prop [options] URL
 
 ## -a, --fake-user-agent
 UserAgentの値を偽装します
+
+## -U, --upgrade
+propをアップデートします  
+これはpip install --upgrade git+https://github.com/mino-38/prop を実行しているだけなので、こちらを直接実行しても構いません
 
 ## -s, --search-words [検索ワード]
 指定されたURLのhtmlコードから検索することができます  
