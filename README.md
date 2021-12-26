@@ -98,3 +98,6 @@ $ prop -r -f %(num)dtest-%(file)s URL
 # 何故これを作ったのか
 wgetの再帰ダウンロードって確かファイル名のフォーマット決められなかったんですよ  
 なので作りました(せっかくなので自分が使う機能も詰め合わせた)
+
+# ライセンス
+[MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
