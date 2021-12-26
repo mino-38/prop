@@ -82,7 +82,7 @@ $ prop -r -f %(num)dtest-%(file)s URL
 ### ダウンロード対象を制限(拡張)するオプション
 |  短縮オプション名  |  長いオプション名  |  処理  |
 |  ----  |  ----  |  ----  |
-|  -np  |  --noparent  |  起点のURLより上の階層のURLは無視するオプション  |
+|  -np  |  --no-parent  |  起点のURLより上の階層のURLは無視するオプション  |
 |  -nc  |  --no-content  |  aタグのhref属性のURLのみ対象とするオプション  |
 |  -nb  |  --no-body  |  imgタグのsrc属性のURLのみ対象とするオプション  |
 |  -nd  | --no-downloaded  |  既にダウンロードしたファイルは無視するオプション  |
