@@ -37,7 +37,7 @@ pip install requests numpy beautifulsoup4 requests[socks] fake-useragent tqdm
 (urllib3はrequests付属)
 """
 
-class error(BaseException):
+class error:
     class ArgsError(Exception):
         pass
 
@@ -60,6 +60,9 @@ class setting:
     """
     オプション設定やファイルへのログを定義するクラス
     """
+    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'log.log')
+    config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+
     def __init__(self):
         # 設定できるオプションたち
         # 他からimportしてもこの辞書を弄ることで色々できる
@@ -67,19 +70,17 @@ class setting:
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(10)
-        self.log_file = os.path.join(os.path.dirname(__file__), 'log.log') # log.logファイルに書き出す設定
         fh = logging.FileHandler(self.log_file)
         logger.addHandler(fh)
         format = logging.Formatter('%(asctime)s:%(lineno)d:%(levelname)s:\n%(message)s')
         fh.setFormatter(format)
         self.log = logger.log
-        self.path = os.path.join(os.path.dirname(__file__), "config.json")
 
     def config_load(self):
         """
         ./config.json(設定ファイル)をロード
         """
-        with open(self.path, 'r') as f:
+        with open(setting.config_file, 'r') as f:
             config: Dict[str, bool or str or None] = json.load(f)
         if type(config['timeout']) is list:
             config['timeout'] = tuple(config['timeout'])
@@ -92,19 +93,19 @@ class setting:
         self.options[key] = value # オプション変更
 
     def clear(self):
-        with open(self.log_file, 'w') as f:
+        with open(setting.log_file, 'w') as f:
             f.write('')
 
-class historys:
+class history:
     """
     ダウンロード履歴関連の関数を定義するクラス
     基本的に./data配下のファイルのみ操作
     """
+    root = os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(__file__))), 'history')
     def __init__(self, url: str):
-        self.root = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'data')
         self.domain = urlparse(url).netloc
-        self.history_file = os.path.join(self.root, self.domain+'.txt')
-        if not os.path.isdir(self.root):
+        self.history_file = os.path.join(history.root, self.domain+'.txt')
+        if not os.path.isdir(history.root):
             os.mkdir(self.root)
 
     def write(self, content: str or list, end: str = '\n') -> None:
@@ -300,7 +301,7 @@ class parser:
             if self.option['debug']:
                 self.log(20, 'robots.txt was none')
         source: List[bytes] = [response.content]
-        print(f'historys are saved in {h.history_file}', file=sys.stderr)
+        print(f'histories are saved in {h.history_file}', file=sys.stderr)
         for n in range(self.option['recursive']):
             for source, cwd_url in zip(source, cwd_urls):
                 datas = bs(source, self.parser)
@@ -387,22 +388,19 @@ class downloader:
     再帰ダウンロードやリクエスト&パースする関数を定義するクラス
     start_download以降の関数は再帰ダウンロード関連の関数
     """
-    logger = logging.getLogger('Log of Prop')
-    logger.setLevel(20)
-    sh = TqdmHandler()
-    logger.addHandler(sh)
-    format = logging.Formatter('%(asctime)s:[\033[36m%(levelname)s\033[0m]> %(message)s')
-    sh.setFormatter(format)
-    log = logger.log
-    # alive_progressのspinner一式
-    # random.choiceでランダムに呼び出す
-    session = requests.Session()
-
     def __init__(self, url: str, option: Dict[str, bool or str or None], parsers='html.parser'):
         self.url: List[str] = url # リスト
         urllib3.disable_warnings(InsecureRequestWarning)
         self.parser: str = parsers
         self.option: Dict[str, Any] = option
+        self.session = requests.Session()
+        logger = logging.getLogger('Log of Prop')
+        logger.setLevel(20)
+        self.sh = TqdmHandler()
+        logger.addHandler(self.sh)
+        format = logging.Formatter('%(asctime)s:[\033[36m%(levelname)s\033[0m]> %(message)s')
+        self.sh.setFormatter(format)
+        self.log = logger.log
         self.parse = parser(self.option, self.log, dl=self)
 
     def start(self) -> None:
@@ -458,7 +456,6 @@ request urls: {0}
 
     def request(self, url: str, instance) -> str or List[requests.models.Response, str]:
         output_data: list = []
-        h = historys(url)
         self.option['formated']: str = self.option['format'].replace('%(root)s', self.parse.get_hostname(url))
         if instance is not requests.post:
             r: requests.models.Response = instance(url, params=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], timeout=(self.option['timeout']), proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
@@ -474,19 +471,19 @@ request urls: {0}
         if self.option['check_only'] and not self.option['recursive']:
             print(f'{url} exist')
             return
+        h = history(r.url)
         if self.option['recursive']:
             if self.option['filename'] is os.path.basename:
                 self.option['filename']: str = '.'
             if self.option['check_only'] or self.option['filename'] is not None and not os.path.isfile(self.option['filename']):
                 if not os.path.isdir(self.option['filename']):
                     os.mkdir(self.option['filename'])
-                history = historys(r.url)
                 cwd = os.getcwd()
                 os.chdir(self.option['filename'])
                 self.log(20, 'parsing...')
-                re: Dict[str, str or bytes] = self.parse.spider(r, h=history, request=self.session, sh=self.sh)
+                res: Dict[str, str or bytes] = self.parse.spider(r, h=h, request=self.session, sh=self.sh)
                 self.log(20, 'download... '+'\033[32m'+'done'+'\033[0m')
-                self.start_conversion(re)
+                self.start_conversion(res)
                 os.chdir(cwd)
                 sys.exit()
             else:
@@ -533,7 +530,7 @@ request urls: {0}
         elif self.option['info']:
             print(f'status code is {response.status_code}')
             print()
-            print('[historys of redirect]')
+            print('[histories of redirect]')
             for h in response.history:
                 print(h.url)
                 information = False
@@ -556,7 +553,7 @@ request urls: {0}
             else:
                 print(i, end='')
 
-    def _split_list(array, N):
+    def _split_list(self, array, N):
         n = math.ceil(len(array) / N)
         return [array[index:index+n] for index in range(0, len(array), n)]
 
@@ -860,14 +857,20 @@ This option does not work properly if you delete the files under the ./data/ dir
 -----The following special options-----
 
 --clear
-Erase all the contents of the log file (./log.log)
+Erase all the contents of the log file ({log_file})
 
 -C, --check
 Does not download, only checks if the specified URL exists
 Checks recursively when used with the -r option
 
 --config-file
-Show the path of config.json
+Show the config file
+
+--log-file
+Show the file written the log
+
+--history-directory
+Show the directory written the histories
 
 -U, --upgrade
 Update the prop.
@@ -886,7 +889,7 @@ When using lxml
 {
     "parser": "lxml"
 }
-You can also change the default settings by changing the contents of ./config.json
+You can also change the default settings by changing the contents of {config_file}
 Setting Example
 {
     "timeout": (3, 10),
@@ -928,7 +931,7 @@ The options that can be changed are as follows
     "torpath": null,
     "save_robots": true // this recommended to specify true
 }
-""")
+""".replace("{config_file}", setting.config_file))
 
 def conversion_arg(args: List[str]) -> list:
     result: list = []
@@ -1164,7 +1167,13 @@ def argument() -> (list, dict, logging.Logger.log):
             elif args == '--clear':
                 option.clear()
             elif args == "--config-file":
-                print(os.path.abspath(option.path))
+                print(setting.config_file)
+                sys.exit()
+            elif args == "--log-file":
+                print(setting.log_file)
+                sys.exit()
+            elif args == "--history-directory":
+                print(history.root)
                 sys.exit()
             elif args == "-U" or args == "--upgrade":
                 subprocess.run(["pip", "install", "--upgrade", "git+https://github.com/mino-38/prop"])
@@ -1173,41 +1182,33 @@ def argument() -> (list, dict, logging.Logger.log):
                 url.append(args)
         return url, option.options, option.log
 
-def print_error():
-    import traceback
-    print(traceback.format_exc(), file=sys.stderr)
-    sys.exit()
-
 def main() -> None:
-    try:
-        url, option, log = argument()
-        for index, link in enumerate(url):
-            if link == '-':
-                link = sys.stdin.readline().rstrip()
-            url[index] = link
-        if url != [] and not option['parse']:
-            dl: downloader = downloader(url, option, option['parser'])
-            if option['caperror']:
-                try:
-                    dl.start()
-                except ConnectTimeout:
-                    dl.log(40, "didn't connect")
-                    log(40, f"Connection Error\n'{url}'")
-                except ReadTimeout:
-                    dl.log(40, 'timeouted')
-                    log(40, f"Timed out while downloading '{url}'")
-                except error.ConnectError as e:
-                    dl.log(40, e)
-            else:
-                try:
-                    dl.start()
-                except:
-                    pass
-        elif option['parse']:
-            dl: downloader = downloader(url, option, option['parser'])
-            print(dl.parse.html_extraction(option['parse'], option['search']))
-    except Exception as e:
-        print(e, file=sys.stderr)
+    url, option, log = argument()
+    for index, link in enumerate(url):
+        if link == '-':
+            link = sys.stdin.readline().rstrip()
+        url[index] = link
+    if url != [] and not option['parse']:
+        dl: downloader = downloader(url, option, option['parser'])
+        if option['caperror']:
+            try:
+                dl.start()
+            except ConnectTimeout:
+                dl.log(40, "didn't connect")
+                log(40, f"Connection Error\n'{url}'")
+            except ReadTimeout:
+                dl.log(40, 'timeouted')
+                log(40, f"Timed out while downloading '{url}'")
+            except error.ConnectError as e:
+                dl.log(40, e)
+        else:
+            try:
+                dl.start()
+            except:
+                pass
+    elif option['parse']:
+        dl: downloader = downloader(url, option, option['parser'])
+        print(dl.parse.html_extraction(option['parse'], option['search']))
 
 if __name__ == '__main__':
     main()
