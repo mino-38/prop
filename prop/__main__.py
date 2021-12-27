@@ -88,7 +88,7 @@ class setting:
 
     def config(self, key: str, value: str or bool or None) -> None:
         """
-        option setting
+        オプションの設定
         """
         self.options[key] = value # オプション変更
 
@@ -99,7 +99,7 @@ class setting:
 class history:
     """
     ダウンロード履歴関連の関数を定義するクラス
-    基本的に./data配下のファイルのみ操作
+    基本的に./history配下のファイルのみ操作
     """
     root = os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(__file__))), 'history')
     def __init__(self, url: str):
@@ -1026,7 +1026,7 @@ def argument() -> (list, dict, logging.Logger.log):
                 elif args == '-c' or args == '--cookie':
                     option.config('cookie', params)
                 else:
-                    option.config('header', header)
+                    option.options['header'].update(header)
             elif args == '-j' or args == '--json':
                 option.config('json', True)
             elif args == '-s' or args == '--search-words':
