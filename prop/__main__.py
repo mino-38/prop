@@ -498,7 +498,7 @@ request urls: {0}
                 os.chdir(cwd)
                 sys.exit()
             else:
-                self.log(40, 'the output destination is not a directory or sat')
+                self.log(40, 'the output destination is not a directory or not set')
                 sys.exit(1)
         elif self.option['info']:
             res: requests.structures.CaseInsensitiveDict = r.headers
