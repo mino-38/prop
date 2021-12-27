@@ -128,6 +128,7 @@ class parser:
     HTMLやURL解析
     spiderはaタグとimgタグから参照先URLを抽出し保存、html_extractionは任意のタグを抽出
     """
+    status_messages = {400: 'Bad Request', 401: 'Unauthorized', 402: 'Payment Required', 403: 'Forbidden', 404: 'Not Found', 405: 'Method Not Allowed', 406: 'Not Acceptable', 407: 'Proxy Authentication Required', 408: 'Request Timeout', 409: 'Conflict', 410: 'Gone', 411: 'Length Required', 412: 'Precondition Failed', 413: 'Payload Too Large', 414: 'URI Too Long', 415: 'Unsupported Media Type', 416: 'Range Not Satisfiable', 417: 'Expectation Failed', 418: "I'm a teapot", 421: 'Misdirected Request', 422: 'Unprocessable Entity', 423: 'Locked', 424: 'Failed Dependency', 425: 'Too Early', 426: 'Upgrade Required', 428: 'Precondition Required', 429: 'Too Many Requests', 431: 'Request Header Fields Too Large', 451: 'Unavailable For Legal Reasons'}
     def __init__(self, option, log, *, dl=None):
         self.option = option
         urllib3.disable_warnings(InsecureRequestWarning)
@@ -203,6 +204,14 @@ class parser:
         data = bs(source, self.parser)
         code: list = data.find_all(name=words.get('tags'), attrs=words['words'], limit=words['limit'])
         return '\n\n'.join(map(str, code))
+
+    def is_success_status(self, returncode):
+        if 200 <= returncode < 400:
+            self.log(20, f'{returncode}: Success request')
+            return True
+        else:
+            self.log(40, '{}: {}'.format(returncode, parser.status_messages.get(returncode, "unknown")))
+            return False
 
     def delay_check(self):
         """
@@ -317,14 +326,14 @@ class parser:
                     if self.option['progress']:
                         a_tag = tqdm(a_tag)
                     for target_url, url in zip(a_tag, a_data.keys()):
-                        for i in range(self.option['reconnect']):
+                        for i in range(self.option['reconnect']+1):
                             try:
                                 res: requests.models.Response = request.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
                                 temporary_list.append(res.content) # BeautifulSoupにはバイト型を渡したほうが文字化けが少なくなるらしいのでバイト型
                                 temporary_list_urls.append(res.url)
                                 h.write(target_url)
                                 if self.option['debug']:
-                                    self.log(20, f"requested '{res.url}'")
+                                    self.is_success_status(res.status_code)
                                     self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                 res.close()
                                 if not self.option['check_only']:
@@ -335,7 +344,7 @@ class parser:
                                     WebSiteData[target_url] = url
                                 break
                             except Exception as e:
-                                if i == self.option['reconnect']-1:
+                                if i >= self.option['reconnect']-1:
                                     self.log(30, e)
                                 sleep(1)
                                 continue
@@ -353,7 +362,7 @@ class parser:
                                 res: requests.models.Response = request.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
                                 h.write(target_url)
                                 if self.option['debug']:
-                                    self.log(20, f"requested '{res.url}'")
+                                    self.is_success_status(res.status_code)
                                     self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                 res.close()
                                 if not self.option['check_only']:
@@ -468,6 +477,8 @@ request urls: {0}
             self.log(20, 'request... '+'\033[32m'+'done'+'\033[0m'+f'  [{len(r.content)} bytes data] {r.elapsed.total_seconds()}s  ')
             if not self.option['info']:
                 print(f'\nresponse headers\n\n'+'\n'.join([f'{k}: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
+        if not self.parse.is_success_status(r.status_code):
+            return
         if self.option['check_only'] and not self.option['recursive']:
             print(f'{url} exist')
             return
