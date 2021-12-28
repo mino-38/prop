@@ -44,12 +44,14 @@ class error:
     class ConnectError(Exception):
         pass
 
-class TqdmHandler(logging.Handler):
+class LoggingHandler(logging.Handler):
+    color = {'INFO': '\033[36mINFO\033[0m', 'WARNING': '\033[33mWARNING\033[0m', 'WARN': '\033[33mWARN\033[0m', 'ERROR': '\033[31mERROR\033[0m'}
     def __init__(self, level=logging.NOTSET):
         super().__init__(level)
 
     def emit(self, record):
         try:
+            record.levelname = LoggingHandler.color.get(record.levelname, record.levelname)
             msg = self.format(record)
             tqdm.write(msg)
             self.flush()
@@ -69,7 +71,7 @@ class setting:
         self.options: Dict[str, bool or str or None] = {'limit': 0, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'progress': True, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/0.1.0'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'log': True, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
-        logger.setLevel(10)
+        logger.setLevel(20)
         fh = logging.FileHandler(self.log_file)
         logger.addHandler(fh)
         format = logging.Formatter('%(asctime)s:%(lineno)d:%(levelname)s:\n%(message)s')
@@ -405,9 +407,9 @@ class downloader:
         self.session = requests.Session()
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
-        self.sh = TqdmHandler()
+        self.sh = LoggingHandler()
         logger.addHandler(self.sh)
-        format = logging.Formatter('%(asctime)s:[\033[36m%(levelname)s\033[0m]> %(message)s')
+        format = logging.Formatter('%(asctime)s:[%(levelname)s]> %(message)s')
         self.sh.setFormatter(format)
         self.log = logger.log
         self.parse = parser(self.option, self.log, dl=self)
