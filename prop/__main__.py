@@ -541,7 +541,6 @@ request urls: {0}
             print(response)
             return
         elif self.option['info']:
-            print(f'status code is {response.status_code}')
             print()
             print('[histories of redirect]')
             for h in response.history:
