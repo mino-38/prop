@@ -68,7 +68,7 @@ class setting:
     def __init__(self):
         # 設定できるオプションたち
         # 他からimportしてもこの辞書を弄ることで色々できる
-        self.options: Dict[str, bool or str or None] = {'limit': 0, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'progress': True, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/0.1.0'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'log': True, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
+        self.options: Dict[str, bool or str or None] = {'limit': 0, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'progress': True, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/0.1.0'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
@@ -387,7 +387,7 @@ class parser:
             temporary_list_urls: list = []
             source: List[bytes] = temporary_list
             temporary_list: list = []
-            if self.option['log']:
+            if self.option['debug']:
                 self.log(20, f'{n+1} hierarchy... '+'\033[32m'+'done'+'\033[0m')
         if self.option['check_only']:
             print('\n'.join(list(WebSiteData.keys())))
@@ -601,7 +601,7 @@ request urls: {0}
                 self.log(30, e)
                 self.ask_continue()
                 continue
-        if self.option['log'] or self.option['debug']:
+        if self.option['debug']:
             self.log(20, f'{url} => {os.path.abspath(save_filename)}')
         return save_filename
 
@@ -860,9 +860,6 @@ Recommended to specify
 -M, --limit [num]
 Specify the number of downloads
 
--L, --no-log
-Do not display the log when downloading and parsing HTML (but recorded in the log file of prop itself)
-
 -nd, --no-downloaded
 URLs that have already been downloaded will not be downloaded
 This option does not work properly if you delete the files under the ./data/ directory (even if you delete it, it will be newly generated when you download it again).
@@ -1070,7 +1067,6 @@ def argument() -> (list, dict, logging.Logger.log):
                 option.config('redirect', False)
             elif args == '-D' or args == '-D':
                 option.config('debug', True)
-                option.config('log', True)
             elif args == '-u' or args == '--upload':
                 path = arg[n+1]
                 if os.path.exists(path):
@@ -1158,8 +1154,6 @@ def argument() -> (list, dict, logging.Logger.log):
                 except (IndexError, ValueError):
                     print(f'please specify the argument of the {args} option')
                     sys.exit(1)
-            elif args == '-L' or args == '--no-log':
-                option.config('log', False)
             elif args == '-m' or args == '--multiprocess':
                 option.config('multiprocess', True)
             elif args == '--tor':
