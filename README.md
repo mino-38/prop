@@ -82,9 +82,9 @@ $ prop -s tags=a%script limit=5 URL
 
 Ex:
 ```bash
-$ prop -r -f %(num)dtest-%(file)s URL
+$ prop -r -f %(num)dtest-%(file)s -o store_ directory URL
 
--> 0test-[filename], 1test-[filename] ...という名前でダウンロード
+-> store_directory/0test-[filename], store_directory/1test-[filename] ...という名前でダウンロード
 ```
 
 ## ダウンロード対象を制限(拡張)するオプション
