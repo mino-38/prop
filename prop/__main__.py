@@ -53,7 +53,7 @@ class LoggingHandler(logging.Handler):
         try:
             record.levelname = LoggingHandler.color.get(record.levelname, record.levelname)
             msg = self.format(record)
-            tqdm.write(msg)
+            tqdm.write(msg, file=sys.stderr)
             self.flush()
         except Exception:
             self.handleError(record)
@@ -536,28 +536,29 @@ request urls: {0}
             return [r, output_data]
 
     def _stdout(self, response, output='') -> None:
-        information = True
         if isinstance(response, str):
             print(response)
             return
-        elif self.option['info']:
+        elif self.option['info'] and response:
             print()
             print('[histories of redirect]')
-            for h in response.history:
-                print(h.url)
-                information = False
-            if information:
+            if not response.history:
                 print('-')
             else:
+                for h in response.history:
+                    print(h.url)
+                    print('↓')
                 print(response.url)
             print()
             print('[cookies]')
-            for c in response.cookies:
-                print(c)
-            if not 'c' in locals():
+            if not response.cookies:
                 print('-')
+            else:
+                for c in response.cookies:
+                    print(c)
             print()
-            print('Below is the response header\n')
+            print('[response headers]')
+            print()
         for i in output:
             if isinstance(i, requests.structures.CaseInsensitiveDict):
                 for k, v in i.items():
