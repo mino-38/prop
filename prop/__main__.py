@@ -161,7 +161,7 @@ class parser:
 
     def get_hostname(self, url: str) -> str or None:
         if self.url_check(url):
-            return urlparse(url).netloc
+            return urlparse(url).netloc.split(':', 1)[0]
         else:
             return None
 
@@ -196,11 +196,7 @@ class parser:
         """
         引数に渡された文字列がURLか判別
         """
-        parsed = urlparse(url)
-        if parsed.scheme:
-            return True
-        else:
-            return False
+        return bool(re.match("https?://[\w!\?/\+\-_~=;\.,\*&@#\$%\(\)'\[\]]+", url))
 
     def html_extraction(self, source: bytes or str, words) -> str:
         data = bs(source, self.parser)
