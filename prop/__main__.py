@@ -595,8 +595,10 @@ request urls: {0}
             except Exception as e:
                 # エラーがでた場合、Warningログを表示し続けるか標準入力を受け取る[y/n]
                 self.log(30, e)
-                self.ask_continue()
-                continue
+                if self.ask_continue():
+                    continue
+                else:
+                    return
         if self.option['debug']:
             self.log(20, f'{url} => {os.path.abspath(save_filename)}')
         return save_filename
@@ -644,13 +646,15 @@ request urls: {0}
                     break
                 except Exception as e:
                     self.log(30, f'pid: {os.getpid()} {e}')
-                    self.ask_continue()
-                    continue
+                    if self.ask_continue():
+                        continue
+                    else:
+                        break
 
     if platform.system() == 'Windows':
         def receive(self):
             result = msvcrt.getch()
-            return str(result)
+            return str(result).lower()
     else:
         def receive(self):
             fd = sys.stdin.fileno()
@@ -667,16 +671,13 @@ request urls: {0}
                 termios.tcsetattr(fd, termios.TCSANOW, old)
             return result
 
-    def ask_continue(self):
+    def ask_continue(self) -> bool:
         while True:
-            print('continue?[y/n]')
+            print('continue?[y/N]')
             answer = self.receive()
             if answer in {'y', 'n'}:
                 break
-        if answer == 'y':
-            return True
-        else:
-            sys.exit()
+        return answer == 'y'
 
 def tor(port=9050):
     return {'http': f'socks5://127.0.0.1:{port}', 'https': f'socks5://127.0.0.1:{port}'}
