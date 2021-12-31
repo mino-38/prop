@@ -687,6 +687,7 @@ def help() -> None:
 <usage>
 prop <option> [URL]
 if you want to read the URL from standard input, please use '-' instead of URL
+
 <List of options>
 -o, --output [file path]
 Specify the output destination file
@@ -904,7 +905,8 @@ Setting Example
         "User-Agent": "test"
     },
     "proxy": {
-        "http": "http: // IP address: port number"
+        "http": "https://IPaddress:PortNumber",
+        "https": "https://IPaddress:PortNumber"
     },
 }
 The options that can be changed are as follows
@@ -927,7 +929,6 @@ The options that can be changed are as follows
     "caperror": true,
     "noparent": false,
     "no_downloaded": false,
-    "log": true,
     "interval": 1,
     "format": "%(file)s",
     "info": false,
@@ -935,7 +936,6 @@ The options that can be changed are as follows
     "ssl": true,
     "parser": "html.parser",
     "no_dl_external": true,
-    "torpath": null,
     "save_robots": true // this recommended to specify true
 }
 """.replace("{config_file}", setting.config_file).replace("{log_file}", setting.log_file))
@@ -1154,7 +1154,6 @@ def argument() -> (list, dict, logging.Logger.log):
             elif args == '-m' or args == '--multiprocess':
                 option.config('multiprocess', True)
             elif args == '--tor':
-                path = option.options.get('torpath')
                 try:
                     port = int(arg[n+1])
                     skip += 1
