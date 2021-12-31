@@ -875,10 +875,10 @@ Checks recursively when used with the -r option
 Show the config file
 
 --log-file
-Show the file written the log
+Show the file which logs are written
 
 --history-directory
-Show the directory written the histories
+Show the directory which files which histories are written are stored
 
 -U, --upgrade
 Update the prop.
