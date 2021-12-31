@@ -78,7 +78,7 @@ class setting:
         fh.setFormatter(format)
         self.log = logger.log
 
-    def config_load(self):
+    def config_load(self) -> None:
         """
         ./config.json(設定ファイル)をロード
         """
@@ -94,7 +94,7 @@ class setting:
         """
         self.options[key] = value # オプション変更
 
-    def clear(self):
+    def clear(self) -> None:
         with open(setting.log_file, 'w') as f:
             f.write('')
 
@@ -123,7 +123,7 @@ class history:
             with open(self.history_file, 'r') as f:
                 return set(f.read().rstrip().split('\n'))
         else:
-            return {}
+            return set()
 
 class parser:
     """
@@ -222,7 +222,7 @@ class parser:
             self.option['interval'] = delay
 
     def _cut(self, list, get, cwd_url, response, root_url, WebSiteData, downloaded, is_ok):
-        data = {}
+        data: dict = dict()
         dns = False
         start = self.option['start'] is None
         for tag in list:
@@ -280,14 +280,14 @@ class parser:
         if self.option['no_downloaded']:
             downloaded: set = h.read()
         else:
-            downloaded: set = {}
+            downloaded: set = set()
         if self.option['body'] and not self.option['check_only'] and not (self.option['no_downloaded'] and response.url.rstrip('/') in downloaded):
             WebSiteData: dict = {response.url: self.dl.recursive_download(response.url, response.text)}
             h.write(response.url.rstrip('/'))
         elif self.option['check_only']:
             WebSiteData: dict = {response.url: response.url}
         else:
-            WebSiteData: dict = {}
+            WebSiteData: dict = dict()
         root_url: str = self.get_rootdir(response.url)
         # ↑ホームURLを取得
         # parser.get_rootdir('http://example.com/1/index.html')
@@ -1015,8 +1015,8 @@ def argument() -> (list, dict, logging.Logger.log):
                     fake = ua.random
                 option.options['header']['User-Agent'] = fake
             elif args == '-d' or args == '-H' or args == '--data' or args == '--header' or args == '-c' or args == '--cookie':
-                params: dict = {}
-                header: dict = {}
+                params: dict = dict()
+                header: dict = dict()
                 for d in arg[n+1:]:
                     i = d.split('=', 1)
                     if len(i) == 2:
