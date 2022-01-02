@@ -964,6 +964,24 @@ def conversion_arg(args: List[str]) -> list:
             result.append(a)
     return result
 
+def _argsplit(args):
+    result: list = []
+    continue_: str = None
+    a = args.split(' ')
+    for v in a:
+        if (v.startswith("'") and not v.endswith("'")) or (v.startswith('"') and not v.endswith('"')):
+            continue_ = v[0]
+            s = [v.strip(continue_)]
+        elif continue_ and v.endswith(continue_):
+            s.append(v.strip(continue_))
+            continue_ = None
+            result.append(' '.join(s))
+        elif continue_:
+            s.append(v)
+        else:
+            result.append(v)
+    return result
+
 def argument() -> (list, dict, logging.Logger.log):
         option: setting = setting()
         option.config_load()
@@ -1076,7 +1094,7 @@ def argument() -> (list, dict, logging.Logger.log):
                     print(f'Error: {fl[1]}\nplease type number')
             elif args == '-l' or args == '--no-redirect':
                 option.config('redirect', False)
-            elif args == '-D' or args == '-D':
+            elif args == '-D' or args == '-D': 
                 option.config('debug', True)
             elif args == '-u' or args == '--upload':
                 path = arg[n+1]
@@ -1095,9 +1113,17 @@ def argument() -> (list, dict, logging.Logger.log):
                 skip += 1
             elif args == '-R' or args == '--read-file':
                 file: str = arg[n+1]
+                urls: list = []
+                options: list = []
                 with open(file, 'r') as f:
-                    url.extend(f.read().split('\n'))
-                skip += 1
+                    instruct = list(filter(lambda s: s != '', f.read().splitlines()))
+                for n, a in enumerate(instruct):
+                    del sys.argv[1:]
+                    sys.argv.extend(_argsplit(a))
+                    url, option, log = argument()
+                    urls.append(url)
+                    options.append(option)
+                return urls, options, log
             elif args == '-B' or args == '--basic-auth':
                 try:
                     user: str = arg[n+1]
@@ -1205,27 +1231,42 @@ def main() -> None:
         if link == '-':
             link = sys.stdin.readline().rstrip()
         url[index] = link
-    if url != [] and not option['parse']:
-        dl: downloader = downloader(url, option, option['parser'])
-        if option['caperror']:
-            try:
-                dl.start()
-            except ConnectTimeout:
-                dl.log(40, "didn't connect")
-                log(40, f"Connection Error\n'{url}'")
-            except ReadTimeout:
-                dl.log(40, 'timeouted')
-                log(40, f"Timed out while downloading '{url}'")
-            except error.ConnectError as e:
-                dl.log(40, e)
+    if url != [] and not (isinstance(option, dict) and option['parse']):
+        if isinstance(option, list):
+            dl: downloader = downloader(url[0], option[0], option[0]['parser'])
+            start(dl)
+            for u, o in zip(url[1:], option[1:]):
+                dl.url = u
+                dl.option = o
+                dl.parse.option = o
+                start(dl)
         else:
-            try:
-                dl.start()
-            except:
-                pass
+            dl: downloader = downloader(url, option, option['parser'])
+            start(dl)
     elif option['parse']:
         dl: downloader = downloader(url, option, option['parser'])
         print(dl.parse.html_extraction(option['parse'], option['search']))
+
+def start(dl):
+    if dl.option['caperror']:
+        try:
+            dl.start()
+        except ConnectTimeout:
+            dl.log(40, "didn't connect")
+            log(40, f"Connection Error\n'{url}'")
+        except ReadTimeout:
+            dl.log(40, 'timeouted')
+            log(40, f"Timed out while downloading '{url}'")
+        except error.ConnectError as e:
+            dl.log(40, e)
+        except Exception as e:
+            dl.log(40, e)
+            log(40, e)
+    else:
+        try:
+            dl.start()
+        except:
+            pass
 
 if __name__ == '__main__':
     main()
