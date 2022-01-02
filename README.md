@@ -51,8 +51,24 @@ $ prop -s tags=a%script limit=5 URL
 -> URLのソースコードからaタグとscriptタグを合計で5つ取得
 ```
 
-### -M, --limit [limit]
+## -M, --limit [limit]
 再帰ダウンロードするファイルの数や、-s, --searchオプションの結果の取得数の指定
+
+## -R, --read-file [file]
+URLやオプションの指定を予め記述してあるファイルから読み込みます
+また、セッションは保持されるため、ログインしてからアクセスするといったことも可能です
+
+Ex
+instruct.txtの中身
+`````
+-a -n -d name=hoge password=hogehoge https://www.example.com/login.php
+-o tmp.html https://www.example.com/page.html
+```
+
+```bash
+$ prop -R instruct.txt
+>>> https://www.example.com/page.htmlをtmp.htmlとしてダウンロード
+```
 
 ## -r, --recursive [下る階層の数]
 指定されたURLを起点として再帰ダウンロードします  
