@@ -545,16 +545,16 @@ request urls: {0}
                 print('-')
             else:
                 for h in response.history:
-                    print(f'\033[32m{h.url}\033[0m')
+                    print(h.url)
                     print('↓')
-                print(f'\033[32m{response.url}\033[0m')
+                print(response.url)
             print()
             print('\033[35m[cookies]\033[0m')
             if not response.cookies:
                 print('-')
             else:
                 for c in response.cookies:
-                    print(f'\033[32m{c.value}\033[0m')
+                    print(f'\033[34m{c.name}\033[0m: {c.value}')
             print()
             print('\033[35m[response headers]\033[0m')
             print()
