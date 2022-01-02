@@ -25,7 +25,7 @@ from requests.exceptions import (ConnectionError, ConnectTimeout,
 from robotsparsetools import NotFoundError, Parse
 from tqdm import tqdm
 from urllib3.exceptions import InsecureRequestWarning
-
+from fake_useragent import UserAgent, FakeUserAgentError
 try:
     import msvcrt
 except:
@@ -198,9 +198,12 @@ class parser:
         """
         return bool(re.match("https?://[\w!\?/\+\-_~=;\.,\*&@#\$%\(\)'\[\]]+", url))
 
-    def html_extraction(self, source: bytes or str, words) -> str:
+    def html_extraction(self, source: bytes or str, words: dict) -> str:
         data = bs(source, self.parser)
-        code: list = data.find_all(name=words.get('tags'), attrs=words['words'], limit=words['limit'])
+        if 'css' in words:
+            code: list = data.select(words.get('css'))
+        else:
+            code: list = data.find_all(name=words.get('tags'), attrs=words['words'], limit=words['limit'])
         return '\n\n'.join(map(str, code))
 
     def is_success_status(self, returncode):
@@ -423,28 +426,28 @@ request urls: {0}
             """.format(self.url, '\n'.join([f'{k}: {v}' for k, v in self.option.items()])))
         if self.option['progress'] and not self.option['recursive']:
             for url in tqdm(self.url):
-                    try:
-                        hostname = self.parse.get_hostname(url)
-                        if not hostname:
-                            raise error.ArgsError(f"It determined that '{url}' is not url")
-                        self.log(20, f"it be querying the DNS server for '{hostname}' now...")
-                        i = self.parse.query_dns(hostname)
-                        self.log(20, f"request start {url} [{i[0][-1][0]}]")
-                        result = self.request(url, instance)
-                    except gaierror:
-                        self.log(20, f"it skiped '{url}' because there was no response from the DNS server")
-                        continue
-                    except error.ArgsError as e:
-                        print(e, file=sys.stderr)
-                        sys.exit(1)
-                    except (MissingSchema, ConnectionError):
-                        raise error.ConnectError(f"Failed to connect to '{url}'")
-                    if self.option['check_only']:
-                        pass
-                    elif isinstance(result, list):
-                        self._stdout(*result)
-                    else:
-                        self._stdout(result)
+                try:
+                    hostname = self.parse.get_hostname(url)
+                    if not hostname:
+                        raise error.ArgsError(f"It determined that '{url}' is not url")
+                    self.log(20, f"it be querying the DNS server for '{hostname}' now...")
+                    i = self.parse.query_dns(hostname)
+                    self.log(20, f"request start {url} [{i[0][-1][0]}]")
+                    result = self.request(url, instance)
+                except gaierror:
+                    self.log(20, f"it skiped '{url}' because there was no response from the DNS server")
+                    continue
+                except error.ArgsError as e:
+                    tqdm.write(str(e), file=sys.stderr)
+                    sys.exit(1)
+                except (MissingSchema, ConnectionError):
+                    raise error.ConnectError(f"Failed to connect to '{url}'")
+                if self.option['check_only']:
+                    pass
+                elif isinstance(result, list):
+                    self._stdout(*result)
+                else:
+                    self._stdout(result)
         else:
             for url in self.url:
                 try:
@@ -537,30 +540,30 @@ request urls: {0}
             return
         elif self.option['info'] and response:
             print()
-            print('[histories of redirect]')
+            print('\033[35m[histories of redirect]\033[0m')
             if not response.history:
                 print('-')
             else:
                 for h in response.history:
-                    print(h.url)
+                    print(f'\033[32m{h.url}\033[0m')
                     print('↓')
-                print(response.url)
+                print(f'\033[32m{response.url}\033[0m')
             print()
-            print('[cookies]')
+            print('\033[35m[cookies]\033[0m')
             if not response.cookies:
                 print('-')
             else:
                 for c in response.cookies:
-                    print(c)
+                    print(f'\033[32m{c.value}\033[0m')
             print()
-            print('[response headers]')
+            print('\033[35m[response headers]\033[0m')
             print()
         for i in output:
-            if isinstance(i, requests.structures.CaseInsensitiveDict):
-                for k, v in i.items():
-                    print(f'{k}:', v)
-            else:
+            if isinstance(i, str):
                 print(i, end='')
+            else:
+                for k, v  in i.items():
+                    print(f'\033[34m{k}\033[0m: {v}')
 
     def _split_list(self, array, N):
         n = math.ceil(len(array) / N)
@@ -784,6 +787,10 @@ tags=tag name
 href=reference
 src=reference
 
+And, you can also use the css selector without using the above
+
+prop -s "a script" [URL]
+
 -e, --no-catch-error
 No output even if an error occurs
 
@@ -804,7 +811,7 @@ Display detailed information at the time of request
 
 -----Below are the options related to recursive downloads-----
 
--r [Recursion count (optional)]
+-r, --recursive [Recursion count (optional)]
 Recursively download site text links
 When specifying this option, be sure to specify the output destination with the -o option (specify "directory" instead of file).
 Also, if you specify a directory that does not exist, a new one will be created.)
@@ -998,21 +1005,19 @@ def argument() -> (list, dict, logging.Logger.log):
                 option.config('progress', False)
             elif args == '-a' or args == '--fake-user-agent':
                 try:
-                    while True:
-                        try:
-                            from fake_useragent import (FakeUserAgentError,
-                                                        UserAgent)
-                            ua = UserAgent()
-                            break
-                        except IndexError:
-                            pass
-                except FakeUserAgentError as e:
-                    print(e)
+                    _stderr = sys.stderr
+                    with open(os.devnull, "w") as null:
+                        sys.stderr = null
+                        ua = UserAgent()
+                        sys.stderr = _stderr
+                except Exception as e:
+                    sys.stderr = _stderr
+                    print(e, file=sys.stderr)
                     continue
                 try:
                     fake = ua[arg[n+1]]
                     skip += 1
-                except:
+                except (IndexError, FakeUserAgentError):
                     fake = ua.random
                 option.options['header']['User-Agent'] = fake
             elif args == '-d' or args == '-H' or args == '--data' or args == '--header' or args == '-c' or args == '--cookie':
@@ -1039,7 +1044,7 @@ def argument() -> (list, dict, logging.Logger.log):
             elif args == '-s' or args == '--search-words':
                 try:
                     word = {'words': {}, 'limit': None}
-                    for i in arg[n+1:]:
+                    for n, i in enumerate(arg[n+1:]):
                         fl = i.split('=', 2)
                         if len(fl) == 2:
                             if  fl[0] != 'limit' and fl[0] != 'tags':
@@ -1049,10 +1054,12 @@ def argument() -> (list, dict, logging.Logger.log):
                             else:
                                 word['limit'] = int(fl[1])
                             skip += 1
+                        elif n == 0:
+                            word['css'] = i
+                            skip += 1
+                            break
                         else:
                             break
-                    if len(word) == 1:
-                        raise error.ArgsError()
                     option.config('search', word)
                     option.config('bytes', True)
                 except (error.ArgsError, IndexError):
@@ -1093,7 +1100,7 @@ def argument() -> (list, dict, logging.Logger.log):
                 except:
                     print(f'the specifying the argument of the {args} option is incorrect\n{args} [UserName] [Password]', file=sys.stderr)
                     sys.exit(1)
-            elif args == '-r':
+            elif args == '-r' or args == '--recursive':
                 try:
                     number: int = int(arg[n+1])
                     skip += 1
