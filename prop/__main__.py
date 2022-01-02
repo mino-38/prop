@@ -201,9 +201,9 @@ class parser:
     def html_extraction(self, source: bytes or str, words: dict) -> str:
         data = bs(source, self.parser)
         if 'css' in words:
-            code: list = data.select(words.get('css'))
+            code: list = data.select(words.get('css'), limit=self.option.get('limit') or None)
         else:
-            code: list = data.find_all(name=words.get('tags'), attrs=words['words'], limit=words['limit'])
+            code: list = data.find_all(name=words.get('tags'), attrs=words['words'], limit=self.option.get('limit') or None)
         return '\n\n'.join(map(str, code))
 
     def is_success_status(self, returncode):
@@ -773,7 +773,7 @@ prop -s tags=a%img%script class=test [URL]
 
 >>> Extract and display the code of a tag, img tag, and script tag from the test class
 
-Also, if limit=number, only the specified number will be extracted.
+Also, if limit=number or use -M, --limit option, only the specified number will be extracted
 Example of use
 prop -s tags=a limit=2 [URL]
 
@@ -789,7 +789,10 @@ src=reference
 
 And, you can also use the css selector without using the above
 
-prop -s "a script" [URL]
+prop -s "a, script" [URL]
+
+-M, --limit [num]
+Specify the number of '-s', '--search' result or the number of recursive download files (-r, --recursive option)
 
 -e, --no-catch-error
 No output even if an error occurs
@@ -861,9 +864,6 @@ The default is 1 second
 It use multi-thread processing when converting the URL reference destination of the downloaded.
 What you do with multithreading The processing time is greatly reduced.
 Recommended to specify
-
--M, --limit [num]
-Specify the number of downloads
 
 -nd, --no-downloaded
 URLs that have already been downloaded will not be downloaded
@@ -1052,7 +1052,7 @@ def argument() -> (list, dict, logging.Logger.log):
                             elif fl[0] == 'tags':
                                 word['tags'] = fl[1].split('%')
                             else:
-                                word['limit'] = int(fl[1])
+                                option.config('limit', int(fl[1]))
                             skip += 1
                         elif n == 0:
                             word['css'] = i
