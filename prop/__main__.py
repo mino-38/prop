@@ -417,8 +417,8 @@ class downloader:
         """
         URLに対してリスエストを送る前準備と実行
         """
-        protocol: dict = {'get': self.session.get, 'post': self.session.post, 'put': self.session.put, 'delete': self.session.delete, 'head': self.session.get, 'options': self.session.options}
-        instance: requests = protocol.get(self.option['types'])
+        methods: dict = {'get': self.session.get, 'post': self.session.post, 'put': self.session.put, 'delete': self.session.delete, 'head': self.session.get, 'options': self.session.options}
+        instance: requests = methods.get(self.option['types'])
         if self.option['debug']:
             self.log(20, """
 request urls: {0}
@@ -473,13 +473,13 @@ request urls: {0}
     def request(self, url: str, instance) -> str or List[requests.models.Response, str]:
         output_data: list = []
         self.option['formated']: str = self.option['format'].replace('%(root)s', self.parse.get_hostname(url))
-        if instance is not requests.post:
+        if self.option['types'] != 'post':
             r: requests.models.Response = instance(url, params=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], timeout=(self.option['timeout']), proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
         else:
             if self.option['json']:
                 r: requests.models.Response = instance(url, json=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=(self.option['timeout']), headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
             else:
-                r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=(self.option['timeout']), headers=self.option['header'], variety=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
+                r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=(self.option['timeout']), headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
         self.init()
         if self.option['debug']:
             self.log(20, 'request... '+'\033[32m'+'done'+'\033[0m'+f'  [{len(r.content)} bytes data] {r.elapsed.total_seconds()}s  ')
@@ -718,10 +718,10 @@ Set the timeout time
 Please specify number
 Also, the -i option takes precedence over this option.
 
--x [protocol format]
+-x, --method [method]
 Communicate by specifying the communication method
 The default is get
-Communication that can be specified with -x
+Communication that can be specified with -x, --method option
 get
 post
 delete
@@ -752,7 +752,7 @@ In addition, it is also possible to specify the name of the browser to automatic
 -c, --cookie cookie name 1 = information 1 cookie name 2 = information 2
 Communicate by specifying the cookies
 
---proxy [proxy]
+-X, --proxy [proxy]
 Specify the proxy to use for communication
 
 --tor [port number (optional)]
@@ -1020,9 +1020,9 @@ def argument() -> (list, dict, logging.Logger.log):
             elif args == '-i' or args == '--ignore':
                 option.config('timeout', None)
                 option.config('notimeout', True)
-            elif args == '-x':
-                protocol = arg[n+1]
-                option.config('types', protocol)
+            elif args == '-x' or args == '--method':
+                method = arg[n+1].lower()
+                option.config('types', method)
                 skip += 1
             elif args == '-S' or args == '--ignore-SSL':
                 option.config('ssl', False)
@@ -1103,7 +1103,7 @@ def argument() -> (list, dict, logging.Logger.log):
                 else:
                     print(f'the existence could not be confirmed: {path}', file=sys.stderr)
                     sys.exit(1)
-            elif args == '--proxy':
+            elif args == '-X' or args == '--proxy':
                 try:
                     proxy_url: str = arg[n+1]
                 except IndexError:
