@@ -45,6 +45,7 @@ propをアップデートします
 また、値を複数指定する場合は、%で区切って指定してください(空白はいれない)
 
 Ex:
+
 ```bash
 $ prop -s tags=a%script limit=5 URL
 
@@ -55,12 +56,13 @@ $ prop -s tags=a%script limit=5 URL
 再帰ダウンロードするファイルの数や、-s, --searchオプションの結果の取得数の指定
 
 ## -R, --read-file [file]
-URLやオプションの指定を予め記述してあるファイルから読み込みます
+URLやオプションの指定を予め記述してあるファイルから読み込みます  
 また、セッションは保持されるため、ログインしてからアクセスするといったことも可能です
 
-Ex
+Ex:  
 instruct.txtの中身
-`````
+
+```
 -a -n -d name=hoge password=hogehoge https://www.example.com/login.php
 -o tmp.html https://www.example.com/page.html
 ```
@@ -143,7 +145,7 @@ $ rm -r $(prop --history-directory)
 
 # 何故これを作ったのか
 wgetの再帰ダウンロードって確かファイル名のフォーマット決められなかったんですよ  
-なので作りました(せっかくなので自分が使う機能も詰め合わせた)
+なので作りました(せっかくなので機能をたくさん詰め合わせた)
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
