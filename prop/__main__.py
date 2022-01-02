@@ -464,6 +464,12 @@ request urls: {0}
                 else:
                     self._stdout(result)
 
+    def init(self):
+        self.option['payload'] = None
+        self.option['cookie'] = None
+        self.option['auth'] = None
+        self.option['upload'] = None
+
     def request(self, url: str, instance) -> str or List[requests.models.Response, str]:
         output_data: list = []
         self.option['formated']: str = self.option['format'].replace('%(root)s', self.parse.get_hostname(url))
@@ -474,6 +480,7 @@ request urls: {0}
                 r: requests.models.Response = instance(url, json=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=(self.option['timeout']), headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
             else:
                 r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=(self.option['timeout']), headers=self.option['header'], variety=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
+        self.init()
         if self.option['debug']:
             self.log(20, 'request... '+'\033[32m'+'done'+'\033[0m'+f'  [{len(r.content)} bytes data] {r.elapsed.total_seconds()}s  ')
             if not self.option['info']:
