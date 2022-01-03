@@ -1157,6 +1157,8 @@ def argument() -> (list, dict, logging.Logger.log):
                     sys.exit(1)
             elif args == '-np' or args == '--no-parent':
                 option.config('noparent', True)
+            elif args in {'-nc', '-nb', '--no-content', '--no-body'}:
+                continue
             elif args == '-M' or args == '--limit':
                 try:
                     limit = int(arg[n+1])
