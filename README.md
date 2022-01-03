@@ -63,7 +63,7 @@ Ex:
 instruct.txtの中身
 
 ```
--a -n -d name=hoge password=hogehoge https://www.example.com/login.php
+-a -n -d name=hoge password=hogehoge -o /dev/null https://www.example.com/login.php
 -o tmp.html https://www.example.com/page.html
 ```
 
