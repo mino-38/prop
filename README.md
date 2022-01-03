@@ -64,12 +64,12 @@ instruct.txtの中身
 
 ```
 -a -n -d name=hoge password=hogehoge -o /dev/null https://www.example.com/login.php
--o tmp.html https://www.example.com/page.html
+-O https://www.example.com/page.html
 ```
 
 ```bash
 $ prop -R instruct.txt
->>> https://www.example.com/page.htmlをtmp.htmlとしてダウンロード
+>>> https://www.example.com/page.htmlをpage.htmlとしてダウンロード
 ```
 
 ## -r, --recursive [下る階層の数]
