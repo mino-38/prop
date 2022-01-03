@@ -142,14 +142,14 @@ class parser:
         """
         ホームアドレスを摘出
         """
-        if self.url_check(url):
+        if self.is_url(url):
             result = urlparse(url)
             return result.scheme+'://'+result.netloc
         else:
             return None
 
     def query_dns(self, url: str):
-        if self.url_check(url):
+        if self.is_url(url):
             host = self.get_hostname(url)
         else:
             host = url
@@ -160,8 +160,8 @@ class parser:
             raise gaierror()
 
     def get_hostname(self, url: str) -> str or None:
-        if self.url_check(url):
-            return urlparse(url).netloc.split(':', 1)[0]
+        if self.is_url(url):
+            return urlparse(url).hostname
         else:
             return None
 
@@ -192,7 +192,7 @@ class parser:
         else:
             return url
 
-    def url_check(self, url: str) -> bool:
+    def is_url(self, url: str) -> bool:
         """
         引数に渡された文字列がURLか判別
         """
@@ -232,7 +232,7 @@ class parser:
             url: str = self.delete_query(tag.get(get)) # 参照先抽出
             if not url:
                 continue
-            if not self.url_check(url):
+            if not self.is_url(url):
                 target_url: str = urljoin(cwd_url, url)
             else:
                 target_url = url
