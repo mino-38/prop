@@ -144,7 +144,7 @@ class parser:
         """
         if self.is_url(url):
             result = urlparse(url)
-            return result.scheme+'://'+result.netloc
+            return result.scheme+'://'+result.hostname
         else:
             return None
 
