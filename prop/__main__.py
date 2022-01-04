@@ -84,7 +84,7 @@ class setting:
         """
         with open(setting.config_file, 'r') as f:
             config: Dict[str, bool or str or None] = json.load(f)
-        if type(config['timeout']) is list:
+        if isinstance(config['timeout'], list):
             config['timeout'] = tuple(config['timeout'])
         self.options.update(config)
 
@@ -111,7 +111,7 @@ class history:
             os.mkdir(self.root)
 
     def write(self, content: str or list, end: str = '\n') -> None:
-        if type(content) is list:
+        if isinstance(content, list):
             content: str  = '\n'.join(content)
         if content in self.read():
             return
@@ -484,11 +484,11 @@ request urls: {0}
         if self.option['debug']:
             self.log(20, 'request... '+'\033[32m'+'done'+'\033[0m'+f'  [{len(r.content)} bytes data] {r.elapsed.total_seconds()}s  ')
             if not self.option['info']:
-                print(f'\nresponse headers\n\n'+'\n'.join([f'{k}: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
+                tqdm.write(f'\nresponse headers\n\n'+'\n'.join([f'{k}: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
         if not self.parse.is_success_status(r.status_code):
             return
         if self.option['check_only'] and not self.option['recursive']:
-            print(f'{url} exist')
+            tqdm.write(f'{url} exist')
             return
         h = history(r.url)
         if self.option['recursive']:
@@ -543,34 +543,31 @@ request urls: {0}
 
     def _stdout(self, response, output='') -> None:
         if isinstance(response, str):
-            print(response)
+            tqdm.write(response)
             return
         elif self.option['info'] and response:
-            print()
-            print('\033[35m[histories of redirect]\033[0m')
+            tqdm.write('\n\033[35m[histories of redirect]\033[0m\n')
             if not response.history:
-                print('-')
+                tqdm.write('-')
             else:
                 for h in response.history:
-                    print(h.url)
-                    print('↓')
-                print(response.url)
-            print()
-            print('\033[35m[cookies]\033[0m')
+                    tqdm.write(h.url)
+                    tqdm.write('↓')
+                tqdm.write(response.url)
+            tqdm.write('\033[35m[cookies]\033[0m\n')
             if not response.cookies:
-                print('-')
+                tqdm.write('-')
             else:
                 for c in response.cookies:
-                    print(f'\033[34m{c.name}\033[0m: {c.value}')
-            print()
-            print('\033[35m[response headers]\033[0m')
-            print()
+                    tqdm.write(f'\033[34m{c.name}\033[0m: {c.value}')
+            tqdm.write('\n\033[35m[response headers]\033[0m\n')
         for i in output:
             if isinstance(i, str):
-                print(i, end='')
+                tqdm.write(i, end='')
             else:
                 for k, v  in i.items():
-                    print(f'\033[34m{k}\033[0m: {v}')
+                    tqdm.write(f'\033[34m{k}\033[0m: {v}')
+        sys.stdout.flush()
 
     def _split_list(self, array, N):
         n = math.ceil(len(array) / N)
