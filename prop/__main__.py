@@ -340,7 +340,8 @@ class parser:
                                 try:
                                     res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
                                     h.write(res.url)
-                                    self.is_success_status(res.status_code)
+                                    if not self.is_success_status(res.status_code):
+                                        break
                                     if self.option['debug']:
                                         self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                     res.close()
@@ -373,8 +374,9 @@ class parser:
                                 temporary_list.append(res.content) # BeautifulSoupにはバイト型を渡したほうが文字化けが少なくなるらしいのでバイト型
                                 temporary_list_urls.append(res.url)
                                 h.write(target_url)
+                                if not self.is_success_status(res.status_code):
+                                    break
                                 if self.option['debug']:
-                                    self.is_success_status(res.status_code)
                                     self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                 res.close()
                                 if not self.option['check_only']:
@@ -404,8 +406,9 @@ class parser:
                             try:
                                 res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
                                 h.write(target_url)
+                                if not self.is_success_status(res.status_code):
+                                    break
                                 if self.option['debug']:
-                                    self.is_success_status(res.status_code)
                                     self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                 res.close()
                                 if not self.option['check_only']:
@@ -417,7 +420,7 @@ class parser:
                                     WebSiteData[target_url] = from_url
                                 break
                             except Exception as e:
-                                if i == self.option['reconnect']-1:
+                                if i >= self.option['reconnect']-1:
                                     self.log(30, e)
                                 continue
                         else:
