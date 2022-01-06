@@ -1,5 +1,4 @@
 __pycache__/
 prop.egg-info/
-data/
-prop/log.log
+prop-log.log
 build/
