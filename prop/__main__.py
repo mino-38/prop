@@ -800,9 +800,11 @@ If you omit the port number, 9050 will be used.
 And, there are some things you need to do before using this option
 Windows:
 Just run tor.exe
+
 Mac:
 Please enter the following command to start tor
 $ brew services start tor
+
 Linux:
 Please enter the following command to start tor
 $ sudo service tor start
@@ -813,9 +815,9 @@ If you have specified this option and want to output to a file, use> (redirect) 
 
 -s, --search-words [words]
 Extracts and outputs the code such as the specified tag, class, id, etc. from the source code of the site
-If you specify more than one, separate them with % (don't use a space)
+If you specify more than one, separate them with ',' (don't use a space)
 Example of use
-prop -s tags=a%img%script class=test [URL]
+prop -s tags=a,img,script class=test [URL]
 
 >>> Extract and display the code of a tag, img tag, and script tag from the test class
 
@@ -1112,9 +1114,9 @@ def argument() -> (list, dict, logging.Logger.log):
                         fl = i.split('=', 2)
                         if len(fl) == 2:
                             if  fl[0] != 'limit' and fl[0] != 'tags':
-                                word['words'][fl[0]] = fl[1].split('%')
+                                word['words'][fl[0]] = fl[1].split(',')
                             elif fl[0] == 'tags':
-                                word['tags'] = fl[1].split('%')
+                                word['tags'] = fl[1].split(',')
                             else:
                                 option.config('limit', int(fl[1]))
                             skip += 1
