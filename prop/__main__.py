@@ -26,16 +26,20 @@ from robotsparsetools import NotFoundError, Parse
 from tqdm import tqdm
 from urllib3.exceptions import InsecureRequestWarning
 from fake_useragent import UserAgent, FakeUserAgentError
-try:
-    import msvcrt
-except:
-    import termios
 
 """
 下記コマンド実行必要
 pip install requests numpy beautifulsoup4 requests[socks] fake-useragent tqdm
 (urllib3はrequests付属)
 """
+
+def ask_continue(msg) -> bool:
+    while True:
+        tqdm.write(f'{msg}[y/N]', end=' ')
+        answer = sys.stdin.read(1).lower()
+        if answer in {'y', 'n'}:
+            break
+    return answer == 'y'
 
 class error:
     class ArgsError(Exception):
@@ -327,7 +331,7 @@ class parser:
                     img_data: dict = self._cut(datas.find_all('img'), 'src', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) # imgタグ抽出
                 self.option['header']['Referer'] = cwd_url
                 if self.option['body']:
-                    if not os.path.isfile(css_file):
+                    if not os.path.isfile(css_file) and not self.option['check_only']:
                         os.mkdir('styles')
                         if self.option['progress']:
                             link_info = tqdm(link_data.items())
@@ -360,7 +364,7 @@ class parser:
                         with open(css_file, 'w') as f:
                             json.dump(WebSiteData, f, indent=4)
                         self.dl.option['formated'] = before_fmt
-                    else:
+                    elif not self.option['check_only']:
                         with open(css_file, 'r') as f:
                             WebSiteData.update(json.load(f))
                     if self.option['progress']:
@@ -374,17 +378,17 @@ class parser:
                                 temporary_list.append(res.content) # BeautifulSoupにはバイト型を渡したほうが文字化けが少なくなるらしいのでバイト型
                                 temporary_list_urls.append(res.url)
                                 h.write(target_url)
-                                if not self.is_success_status(res.status_code):
-                                    break
                                 if self.option['debug']:
                                     self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                 res.close()
-                                if not self.option['check_only']:
+                                if self.option['check_only']:
+                                    WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'None'
+                                else:
+                                    if not self.is_success_status(res.status_code):
+                                        break
                                     count += 1
                                     result = self.dl.recursive_download(res.url, res.text, count)
                                     WebSiteData[from_url] = result
-                                else:
-                                    WebSiteData[target_url] = from_url
                                 break
                             except Exception as e:
                                 if i >= self.option['reconnect']-1:
@@ -411,13 +415,13 @@ class parser:
                                 if self.option['debug']:
                                     self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                 res.close()
-                                if not self.option['check_only']:
+                                if self.option['check_only']:
+                                    WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'None'
+                                else:
                                     count += 1
                                     result = self.dl.recursive_download(res.url, res.content, count)
                                     WebSiteData[from_url] = result
                                     saved_images_file_list.append(result)
-                                else:
-                                    WebSiteData[target_url] = from_url
                                 break
                             except Exception as e:
                                 if i >= self.option['reconnect']-1:
@@ -434,7 +438,8 @@ class parser:
             if self.option['debug']:
                 self.log(20, f'{n+1} hierarchy... '+'\033[32m'+'done'+'\033[0m')
         if self.option['check_only']:
-            print('\n'.join(list(WebSiteData.keys())))
+            for k, v in WebSiteData.items():
+                print(f'{k}: {v}')
             sys.exit()
         return WebSiteData, saved_images_file_list
 
@@ -647,7 +652,7 @@ request urls: {0}
             except Exception as e:
                 # エラーがでた場合、Warningログを表示し続けるか標準入力を受け取る[y/n]
                 self.log(30, e)
-                if self.ask_continue():
+                if ask_continue('continue?'):
                     continue
                 else:
                     return
@@ -698,38 +703,10 @@ request urls: {0}
                     break
                 except Exception as e:
                     self.log(30, f'pid: {os.getpid()} {e}')
-                    if self.ask_continue():
+                    if ask_continue('continue?'):
                         continue
                     else:
                         break
-
-    if platform.system() == 'Windows':
-        def receive(self):
-            result = msvcrt.getch()
-            return str(result).lower()
-    else:
-        def receive(self):
-            fd = sys.stdin.fileno()
-            old = termios.tcgetattr(fd)
-            new = termios.tcgetattr(fd)
-            new[3] &= ~termios.ICANON
-            #ECHO(入力された文字を表示するか否かのフラグ)を外す
-            new[3] &= ~termios.ECHO
-            try:
-                termios.tcsetattr(fd, termios.TCSANOW, new)
-                result = sys.stdin.read(1).lower()
-            finally:
-                # fdの属性を元に戻す
-                termios.tcsetattr(fd, termios.TCSANOW, old)
-            return result
-
-    def ask_continue(self) -> bool:
-        while True:
-            print('continue?[y/N]')
-            answer = self.receive()
-            if answer in {'y', 'n'}:
-                break
-        return answer == 'y'
 
 def tor(port=9050):
     return {'http': f'socks5://127.0.0.1:{port}', 'https': f'socks5://127.0.0.1:{port}'}
