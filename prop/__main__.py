@@ -27,19 +27,16 @@ from tqdm import tqdm
 from urllib3.exceptions import InsecureRequestWarning
 from fake_useragent import UserAgent, FakeUserAgentError
 
+try:
+    import msvcrt
+except:
+    import termios
+
 """
 下記コマンド実行必要
 pip install requests numpy beautifulsoup4 requests[socks] fake-useragent tqdm
 (urllib3はrequests付属)
 """
-
-def ask_continue(msg) -> bool:
-    while True:
-        tqdm.write(f'{msg}[y/N]', end=' ')
-        answer = sys.stdin.read(1).lower()
-        if answer in {'y', 'n'}:
-            break
-    return answer == 'y'
 
 class error:
     class ArgsError(Exception):
@@ -76,7 +73,7 @@ class setting:
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
-        fh = logging.FileHandler(self.log_file)
+        fh = logging.FileHandler(setting.log_file)
         logger.addHandler(fh)
         format = logging.Formatter('%(asctime)s:%(lineno)d:%(levelname)s:\n%(message)s')
         fh.setFormatter(format)
@@ -639,6 +636,8 @@ request urls: {0}
         file: Tuple[str] = self.parse.splitext(url.rstrip('/'))
         # フォーマットを元に保存ファイル名を決める
         save_filename: str = self.option['formated'].replace('%(file)s', self.parse.get_filename(file[0])).replace('%(num)d', str(number))+(file[1] or '.html')
+        if os.path.isfile(save_filename) and not self.ask_continue(f'{save_filename} has already existed\nCan I overwrite?'):
+            return save_filename
         while True:
             try:
                 if isinstance(source, str):
@@ -652,7 +651,7 @@ request urls: {0}
             except Exception as e:
                 # エラーがでた場合、Warningログを表示し続けるか標準入力を受け取る[y/n]
                 self.log(30, e)
-                if ask_continue('continue?'):
+                if self.ask_continue('continue?'):
                     continue
                 else:
                     return
@@ -703,10 +702,46 @@ request urls: {0}
                     break
                 except Exception as e:
                     self.log(30, f'pid: {os.getpid()} {e}')
-                    if ask_continue('continue?'):
+                    if self.ask_continue('continue?'):
                         continue
                     else:
                         break
+
+    if platform.system() == 'Windows':
+        def receive(self):
+            result = msvcrt.getch()
+            return str(result).lower()
+    else:
+        def receive(self):
+            fd = sys.stdin.fileno()
+            old = termios.tcgetattr(fd)
+            new = termios.tcgetattr(fd)
+            new[3] &= ~termios.ICANON
+            new[3] &= ~termios.ECHO
+            try:
+                termios.tcsetattr(fd, termios.TCSANOW, new)
+                result = sys.stdin.read(1).lower()
+            finally:
+                termios.tcsetattr(fd, termios.TCSANOW, old)
+            return result
+
+    def ask_continue(self, msg) -> bool:
+        while True:
+            tqdm.write(f'{msg}[y/N]\n')
+            res = ''
+            answer = self.receive()
+            while answer != '\n':
+                res += answer
+                tqdm.write(answer, end='')
+                sys.stdout.flush()
+                answer = self.receive()
+            if res in {'y', 'n', 'yes', 'no'}:
+                break
+            print('\033[1A\r', end='')
+        print('\033[1A\r\033[1J', end='')
+        print('\033[1A\r\033[1J', end='')
+        sys.stdout.flush()
+        return res in {'y', 'yes'}
 
 def tor(port=9050):
     return {'http': f'socks5://127.0.0.1:{port}', 'https': f'socks5://127.0.0.1:{port}'}
