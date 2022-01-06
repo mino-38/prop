@@ -59,11 +59,25 @@ class LoggingHandler(logging.Handler):
         except Exception:
             self.handleError(record)
 
+class LoggingFileHandler(logging.Handler):
+    def __init__(self, file, mode="a", level=logging.NOTSET):
+        super().__init__(level)
+        self.file = open(file, mode)
+
+    def emit(self, record):
+        try:
+            record.msg = re.sub('\033\[[+-]?\d+m', '', record.msg)
+            msg = self.format(record)
+            self.file.write(msg)
+            self.file.write('\n')
+        except Exception as e:
+            self.handleError(record)
+
 class setting:
     """
     オプション設定やファイルへのログを定義するクラス
     """
-    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'log.log')
+    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prop-log.log')
     config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
     def __init__(self):
@@ -73,10 +87,10 @@ class setting:
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
-        fh = logging.FileHandler(setting.log_file)
-        logger.addHandler(fh)
+        self.fh = LoggingFileHandler(setting.log_file)
+        logger.addHandler(self.fh)
         format = logging.Formatter('%(asctime)s:%(lineno)d:%(levelname)s:\n%(message)s')
-        fh.setFormatter(format)
+        self.fh.setFormatter(format)
         self.log = logger.log
 
     def config_load(self) -> None:
@@ -197,7 +211,7 @@ class parser:
         """
         引数に渡された文字列がURLか判別
         """
-        return bool(re.match("https?://[\w!\?/\+\-_~=;\.,\*&@#\$%\(\)'\[\]]+", url))
+        return bool(re.match(r"https?://[\w!\?/\+\-_~=;\.,\*&@#\$%\(\)'\[\]]+", url))
 
     def html_extraction(self, source: bytes or str, words: dict) -> str:
         data = bs(source, self.parser)
@@ -750,7 +764,7 @@ def tor(port=9050):
 def help() -> None:
     print("""
 <usage>
-prop <option> [URL]
+prop <option> URL [URL...]
 if you want to read the URL from standard input, please use '-' instead of URL
 
 <List of options>
@@ -1046,9 +1060,13 @@ def argument() -> (list, dict, logging.Logger.log):
         url: list = []
         arg: List[str] = conversion_arg(sys.argv)
         if len(arg) == 1:
-            arg.append("--help")
+            print("""
+prop <options> URL [URL...]
+\033[33mIf you want to see help message, please use '-h', '--help' options and you will see help
+            """)
+            sys.exit(1)
         for n, args in enumerate(arg):
-            if skip or n == 0:
+            if skip:
                 skip -= 1
                 continue
             if args == '-h' or args == '--help':
@@ -1282,29 +1300,30 @@ def argument() -> (list, dict, logging.Logger.log):
                 sys.exit()
             else:
                 url.append(args)
-        return url, option.options, option.log
+        return url, option.fh.file, option.options, option.log
 
 def main() -> None:
-    url, option, log = argument()
+    url, log_file, option, log = argument()
     for index, link in enumerate(url):
         if link == '-':
             link = sys.stdin.readline().rstrip()
         url[index] = link
-    if url != [] and not (isinstance(option, dict) and option['parse']):
-        if isinstance(option, list):
-            dl: downloader = downloader(url[0], option[0], option[0]['parser'])
-            start(dl, log)
-            for u, o in zip(url[1:], option[1:]):
-                dl.url = u
-                dl.option = o
-                dl.parse.option = o
+    with log_file:
+        if url != [] and not (isinstance(option, dict) and option['parse']):
+            if isinstance(option, list):
+                dl: downloader = downloader(url[0], option[0], option[0]['parser'])
                 start(dl, log)
-        else:
+                for u, o in zip(url[1:], option[1:]):
+                    dl.url = u
+                    dl.option = o
+                    dl.parse.option = o
+                    start(dl, log)
+            else:
+                dl: downloader = downloader(url, option, option['parser'])
+                start(dl, log)
+        elif option['parse']:
             dl: downloader = downloader(url, option, option['parser'])
-            start(dl, log)
-    elif option['parse']:
-        dl: downloader = downloader(url, option, option['parser'])
-        print(dl.parse.html_extraction(option['parse'], option['search']))
+            print(dl.parse.html_extraction(option['parse'], option['search']))
 
 def start(dl, log):
     if dl.option['caperror']:
