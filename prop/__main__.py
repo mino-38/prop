@@ -263,7 +263,7 @@ class parser:
                         self.log(20, f"it be querying the DNS server for '{hostname}' now...")
                     i = self.query_dns(hostname)
                 except gaierror:
-                    self.log(20, f"it skiped {target_url} because there was no response from the DNS server")
+                    self.log(30, f"it skiped {target_url} because there was no response from the DNS server")
                     continue
                 except:
                     pass
