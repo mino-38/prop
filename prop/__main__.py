@@ -249,8 +249,8 @@ class parser:
                 continue
             if self.option['debug']:
                 self.log(20, f"found '{target_url}'")
-            if self.option['save_robots'] and not is_ok('*', url):
-                self.log(20, f'{target_url} is prohibited by robots.txt')
+            if self.option['save_robots'] and not is_ok(url):
+                self.log(30, f'{target_url} is prohibited by robots.txt')
                 continue
             if dns:
                 try:
