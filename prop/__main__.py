@@ -62,7 +62,7 @@ class setting:
     """
     オプション設定やファイルへのログを定義するクラス
     """
-    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'log.log')
+    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prop-log.log')
     config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
 
     def __init__(self):
