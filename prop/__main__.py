@@ -221,7 +221,7 @@ class parser:
         """
         delay = self.robots.delay()
         if delay is not None and self.option['interval'] < delay:
-            self.log(20, f"it changed interval because it was shorter than the time stated in robots.txt  '{self.option['interval']}' => '{delay}'")
+            self.log(30, f"it changed interval because it was shorter than the time stated in robots.txt  '{self.option['interval']}' => '{delay}'")
             self.option['interval'] = delay
 
     def _cut(self, list, get, cwd_url, response, root_url, WebSiteData, downloaded, is_ok, cut=True):
