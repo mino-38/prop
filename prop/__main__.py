@@ -38,6 +38,8 @@ pip install requests numpy beautifulsoup4 requests[socks] fake-useragent tqdm
 (urllib3はrequests付属)
 """
 
+urllib3.disable_warnings(InsecureRequestWarning)
+
 class error:
     class ArgsError(Exception):
         pass
@@ -66,10 +68,12 @@ class LoggingFileHandler(logging.Handler):
 
     def emit(self, record):
         try:
-            record.msg = re.sub('\033\[[+-]?\d+m', '', str(record.msg))
+            record.msg = re.sub('\033\\[[+-]?\d+m', '', str(record.msg))
+            record.levelname = re.sub('\033\\[[+-]?\d+m', '', record.levelname)
             msg = self.format(record)
             self.file.write(msg)
             self.file.write('\n')
+            self.file.flush()
         except Exception as e:
             self.handleError(record)
 
@@ -151,7 +155,6 @@ class parser:
     status_messages = {400: 'Bad Request', 401: 'Unauthorized', 402: 'Payment Required', 403: 'Forbidden', 404: 'Not Found', 405: 'Method Not Allowed', 406: 'Not Acceptable', 407: 'Proxy Authentication Required', 408: 'Request Timeout', 409: 'Conflict', 410: 'Gone', 411: 'Length Required', 412: 'Precondition Failed', 413: 'Payload Too Large', 414: 'URI Too Long', 415: 'Unsupported Media Type', 416: 'Range Not Satisfiable', 417: 'Expectation Failed', 418: "I'm a teapot", 421: 'Misdirected Request', 422: 'Unprocessable Entity', 423: 'Locked', 424: 'Failed Dependency', 425: 'Too Early', 426: 'Upgrade Required', 428: 'Precondition Required', 429: 'Too Many Requests', 431: 'Request Header Fields Too Large', 451: 'Unavailable For Legal Reasons', 500: 'Internal Server Error', 501: 'Not Implemented', 502: 'Bad Gateway', 503: 'Service Unavailable', 504: 'Gateway Timeout', 505: 'HTTP Version Not Supported', 506: 'Variant Also Negotiates', 507: 'Insufficient Storage', 508: 'Loop Detected', 510: 'Not Extended', 511: 'Network Authentication Required'}
     def __init__(self, option, log, *, dl=None):
         self.option = option
-        urllib3.disable_warnings(InsecureRequestWarning)
         self.log = log
         self.parser = self.option['parser']
         self.dl = dl
@@ -363,12 +366,9 @@ class parser:
                                     if self.option['debug']:
                                         self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                     res.close()
-                                    if not self.option['check_only']:
-                                        count += 1
-                                        result = self.dl.recursive_download(res.url, res.text, count)
-                                        WebSiteData[from_url] = result
-                                    else:
-                                        WebSiteData[target_url] = from_url
+                                    count += 1
+                                    result = self.dl.recursive_download(res.url, res.text, count)
+                                    WebSiteData[from_url] = result
                                     break
                                 except Exception as e:
                                     if i >= self.option['reconnect']-1:
@@ -396,7 +396,7 @@ class parser:
                                     self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                 res.close()
                                 if self.option['check_only']:
-                                    WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'None'
+                                    WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'Not'
                                 else:
                                     if not self.is_success_status(res.status_code):
                                         break
@@ -430,7 +430,7 @@ class parser:
                                     self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                 res.close()
                                 if self.option['check_only']:
-                                    WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'None'
+                                    WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'Not'
                                 else:
                                     count += 1
                                     result = self.dl.recursive_download(res.url, res.content, count)
@@ -453,7 +453,7 @@ class parser:
                 self.log(20, f'{n+1} hierarchy... '+'\033[32m'+'done'+'\033[0m')
         if self.option['check_only']:
             for k, v in WebSiteData.items():
-                print(f'{k}: {v}')
+                print('{}  ... {}{}\033[0m'.format(k, '\033[32m' if v == 'Exists' else '\033[31m', v))
             sys.exit()
         return WebSiteData, saved_images_file_list
 
@@ -464,7 +464,6 @@ class downloader:
     """
     def __init__(self, url: str, option: Dict[str, bool or str or None], parsers='html.parser'):
         self.url: List[str] = url # リスト
-        urllib3.disable_warnings(InsecureRequestWarning)
         self.parser: str = parsers
         self.option: Dict[str, Any] = option
         self.session = requests.Session()
