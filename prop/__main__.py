@@ -17,15 +17,16 @@ from urllib.error import URLError
 from urllib.parse import urldefrag, urljoin, urlparse
 
 import requests
-import urllib3
 from bs4 import BeautifulSoup as bs
+from fake_useragent import FakeUserAgentError, UserAgent
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import (ConnectionError, ConnectTimeout,
                                  MissingSchema, ReadTimeout)
+from requests.packages import urllib3
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from robotsparsetools import NotFoundError, Parse
 from tqdm import tqdm
-from urllib3.exceptions import InsecureRequestWarning
-from fake_useragent import UserAgent, FakeUserAgentError
+
 try:
     import msvcrt
 except:
@@ -36,6 +37,8 @@ except:
 pip install requests numpy beautifulsoup4 requests[socks] fake-useragent tqdm
 (urllib3はrequests付属)
 """
+
+urllib3.disable_warnings(InsecureRequestWarning)
 
 class error:
     class ArgsError(Exception):
@@ -58,6 +61,22 @@ class LoggingHandler(logging.Handler):
         except Exception:
             self.handleError(record)
 
+class LoggingFileHandler(logging.Handler):
+    def __init__(self, file, mode="a", level=logging.NOTSET):
+        super().__init__(level)
+        self.file = open(file, mode)
+
+    def emit(self, record):
+        try:
+            record.msg = re.sub('\033\\[[+-]?\d+m', '', str(record.msg))
+            record.levelname = re.sub('\033\\[[+-]?\d+m', '', record.levelname)
+            msg = self.format(record)
+            self.file.write(msg)
+            self.file.write('\n')
+            self.file.flush()
+        except Exception as e:
+            self.handleError(record)
+
 class setting:
     """
     オプション設定やファイルへのログを定義するクラス
@@ -72,10 +91,13 @@ class setting:
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
-        fh = logging.FileHandler(self.log_file)
-        logger.addHandler(fh)
-        format = logging.Formatter('%(asctime)s:%(lineno)d:%(levelname)s:\n%(message)s')
-        fh.setFormatter(format)
+        sh = LoggingHandler()
+        self.fh = LoggingFileHandler(setting.log_file)
+        logger.addHandler(sh)
+        logger.addHandler(self.fh)
+        format = logging.Formatter('%(asctime)s:[%(levelname)s]> %(message)s')
+        sh.setFormatter(format)
+        self.fh.setFormatter(format)
         self.log = logger.log
 
     def config_load(self) -> None:
@@ -108,7 +130,7 @@ class history:
         self.domain = urlparse(url).netloc
         self.history_file = os.path.join(history.root, self.domain+'.txt')
         if not os.path.isdir(history.root):
-            os.mkdir(self.root)
+            os.mkdir(history.root)
 
     def write(self, content: str or list, end: str = '\n') -> None:
         if isinstance(content, list):
@@ -133,7 +155,6 @@ class parser:
     status_messages = {400: 'Bad Request', 401: 'Unauthorized', 402: 'Payment Required', 403: 'Forbidden', 404: 'Not Found', 405: 'Method Not Allowed', 406: 'Not Acceptable', 407: 'Proxy Authentication Required', 408: 'Request Timeout', 409: 'Conflict', 410: 'Gone', 411: 'Length Required', 412: 'Precondition Failed', 413: 'Payload Too Large', 414: 'URI Too Long', 415: 'Unsupported Media Type', 416: 'Range Not Satisfiable', 417: 'Expectation Failed', 418: "I'm a teapot", 421: 'Misdirected Request', 422: 'Unprocessable Entity', 423: 'Locked', 424: 'Failed Dependency', 425: 'Too Early', 426: 'Upgrade Required', 428: 'Precondition Required', 429: 'Too Many Requests', 431: 'Request Header Fields Too Large', 451: 'Unavailable For Legal Reasons', 500: 'Internal Server Error', 501: 'Not Implemented', 502: 'Bad Gateway', 503: 'Service Unavailable', 504: 'Gateway Timeout', 505: 'HTTP Version Not Supported', 506: 'Variant Also Negotiates', 507: 'Insufficient Storage', 508: 'Loop Detected', 510: 'Not Extended', 511: 'Network Authentication Required'}
     def __init__(self, option, log, *, dl=None):
         self.option = option
-        urllib3.disable_warnings(InsecureRequestWarning)
         self.log = log
         self.parser = self.option['parser']
         self.dl = dl
@@ -196,7 +217,7 @@ class parser:
         """
         引数に渡された文字列がURLか判別
         """
-        return bool(re.match("https?://[\w!\?/\+\-_~=;\.,\*&@#\$%\(\)'\[\]]+", url))
+        return bool(re.match(r"https?://[\w!\?/\+\-_~=;\.,\*&@#\$%\(\)'\[\]]+", url))
 
     def html_extraction(self, source: bytes or str, words: dict) -> str:
         data = bs(source, self.parser)
@@ -221,11 +242,12 @@ class parser:
         """
         delay = self.robots.delay()
         if delay is not None and self.option['interval'] < delay:
-            self.log(20, f"it changed interval because it was shorter than the time stated in robots.txt  '{self.option['interval']}' => '{delay}'")
+            self.log(30, f"it changed interval because it was shorter than the time stated in robots.txt  '{self.option['interval']}' => '{delay}'")
             self.option['interval'] = delay
 
-    def _cut(self, list, get, cwd_url, response, root_url, WebSiteData, downloaded, is_ok):
+    def _cut(self, list, get, cwd_url, response, root_url, WebSiteData, downloaded, is_ok, cut=True):
         data: dict = dict()
+        did_host: set = set()
         dns = False
         start = self.option['start'] is None
         for tag in list:
@@ -237,41 +259,44 @@ class parser:
             else:
                 target_url = url
                 dns = True
-            if not start:
+            if cut and not start:
                 if target_url.endswith(self.option['start']):
                     start = True
                 else:
                     continue
-            if (self.option['noparent'] and (not target_url.startswith(response.url) and target_url.startswith(root_url))) or url in set(WebSiteData.keys()) or ((target_url.startswith(cwd_url) and  '#' in target_url) or (self.option['no_dl_external'] and not target_url.startswith(root_url))):
+            if cut and ((self.option['noparent'] and (not target_url.startswith(response.url) and target_url.startswith(root_url))) or url in set(WebSiteData.keys()) or ((target_url.startswith(cwd_url) and  '#' in target_url) or (self.option['no_dl_external'] and not target_url.startswith(root_url)))):
                 continue
-            if self.option['no_downloaded'] and target_url in downloaded:
+            if cut and (self.option['no_downloaded'] and target_url in downloaded):
                 continue
             if self.option['debug']:
                 self.log(20, f"found '{target_url}'")
             if self.option['save_robots'] and not is_ok(url):
-                self.log(20, f'{target_url} is prohibited by robots.txt')
+                self.log(30, f'{target_url} is prohibited by robots.txt')
                 continue
             if dns:
                 try:
                     hostname = self.get_hostname(target_url)
+                    if hostname in did_host:
+                        continue
                     if not hostname:
                         raise gaierror()
                     if self.option['debug']:
                         self.log(20, f"it be querying the DNS server for '{hostname}' now...")
                     i = self.query_dns(hostname)
                 except gaierror:
-                    self.log(20, f"it skiped {target_url} because there was no response from the DNS server")
+                    self.log(30, f"it skiped {target_url} because there was no response from the DNS server")
                     continue
                 except:
                     pass
                 finally:
                     dns = False
+                    did_host.add(hostname)
             data[url] = self.delete_query(target_url)
-            if 0 < self.option['limit'] <= len(data):
+            if cut and 0 < self.option['limit'] <= len(data):
                 break
         return data
 
-    def spider(self, response, *, h=sys.stdout, request, sh) -> Tuple[dict, list]:
+    def spider(self, response, *, h=sys.stdout, session) -> Tuple[dict, list]:
         """
         HTMLからaタグとimgタグの参照先を抽出し保存
         """
@@ -280,6 +305,7 @@ class parser:
         saved_images_file_list: list = []
         count = 0
         max = self.option['interval']+3
+        css_file = os.path.join('styles', 'prop_css_info.json')
         if self.option['no_downloaded']:
             downloaded: set = h.read()
         else:
@@ -316,33 +342,67 @@ class parser:
             for source, cwd_url in zip(source, cwd_urls):
                 datas = bs(source, self.parser)
                 if self.option['body']:
-                    a_data: list = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) #aタグ抽出
-                    a_tag: list = a_data.values()
-                    # link_tag: list = datas.find_all('link', rel='stylesheet')
+                    a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) #aタグ抽出
+                    link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, WebSiteData, downloaded, is_ok, False) # rel=stylesheetのlinkタグを抽出
                 if self.option['content']:
-                    img_data: list =self. _cut(datas.find_all('img'), 'src', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) # imgタグ抽出
-                    img_tag = img_data.values()
+                    img_data: dict = self._cut(datas.find_all('img'), 'src', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) # imgタグ抽出
                 self.option['header']['Referer'] = cwd_url
                 if self.option['body']:
+                    if not os.path.isfile(css_file) and not self.option['check_only']:
+                        os.mkdir('styles')
+                        if self.option['progress']:
+                            link_info = tqdm(link_data.items())
+                        else:
+                            link_info = link_data.items()
+                        before_fmt = self.dl.option['formated']
+                        self.dl.option['formated'] = os.path.join('styles', self.dl.option['formated'])
+                        for from_url, target_url in link_info:
+                            for i in range(self.option['reconnect']+1):
+                                try:
+                                    res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
+                                    h.write(res.url)
+                                    if not self.is_success_status(res.status_code):
+                                        break
+                                    if self.option['debug']:
+                                        self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
+                                    res.close()
+                                    count += 1
+                                    result = self.dl.recursive_download(res.url, res.text, count)
+                                    WebSiteData[from_url] = result
+                                    break
+                                except Exception as e:
+                                    if i >= self.option['reconnect']-1:
+                                        self.log(30, e)
+                                    sleep(1)
+                                    continue
+                        with open(css_file, 'w') as f:
+                            json.dump(WebSiteData, f, indent=4)
+                        self.dl.option['formated'] = before_fmt
+                    elif not self.option['check_only']:
+                        with open(css_file, 'r') as f:
+                            WebSiteData.update(json.load(f))
                     if self.option['progress']:
-                        a_tag = tqdm(a_tag)
-                    for target_url, url in zip(a_tag, a_data.keys()):
+                        a_info = tqdm(a_data.items())
+                    else:
+                        a_info = a_data.items()
+                    for from_url, target_url in a_info:
                         for i in range(self.option['reconnect']+1):
                             try:
-                                res: requests.models.Response = request.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
+                                res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
                                 temporary_list.append(res.content) # BeautifulSoupにはバイト型を渡したほうが文字化けが少なくなるらしいのでバイト型
                                 temporary_list_urls.append(res.url)
                                 h.write(target_url)
                                 if self.option['debug']:
-                                    self.is_success_status(res.status_code)
                                     self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                 res.close()
-                                if not self.option['check_only']:
+                                if self.option['check_only']:
+                                    WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'Not'
+                                else:
+                                    if not self.is_success_status(res.status_code):
+                                        break
                                     count += 1
                                     result = self.dl.recursive_download(res.url, res.text, count)
-                                    WebSiteData[url] = result
-                                else:
-                                    WebSiteData[target_url] = url
+                                    WebSiteData[from_url] = result
                                 break
                             except Exception as e:
                                 if i >= self.option['reconnect']-1:
@@ -356,26 +416,29 @@ class parser:
                         sleep(round(uniform(self.option['interval'], max), 1))
                 if self.option['content']:
                     if self.option['progress']:
-                        img_tag = tqdm(img_tag)
-                    for target_url, url in zip(img_tag, img_data.keys()):
+                        img_info = tqdm(img_data.items())
+                    else:
+                        img_info = img_data.items()
+                    for from_url, target_url in img_info:
                         for i in range(self.option['reconnect']):
                             try:
-                                res: requests.models.Response = request.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
+                                res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
                                 h.write(target_url)
+                                if not self.is_success_status(res.status_code):
+                                    break
                                 if self.option['debug']:
-                                    self.is_success_status(res.status_code)
                                     self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                 res.close()
-                                if not self.option['check_only']:
+                                if self.option['check_only']:
+                                    WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'Not'
+                                else:
                                     count += 1
                                     result = self.dl.recursive_download(res.url, res.content, count)
-                                    WebSiteData[url] = result
+                                    WebSiteData[from_url] = result
                                     saved_images_file_list.append(result)
-                                else:
-                                    WebSiteData[target_url] = url
                                 break
                             except Exception as e:
-                                if i == self.option['reconnect']-1:
+                                if i >= self.option['reconnect']-1:
                                     self.log(30, e)
                                 continue
                         else:
@@ -389,7 +452,8 @@ class parser:
             if self.option['debug']:
                 self.log(20, f'{n+1} hierarchy... '+'\033[32m'+'done'+'\033[0m')
         if self.option['check_only']:
-            print('\n'.join(list(WebSiteData.keys())))
+            for k, v in WebSiteData.items():
+                print('{}  ... {}{}\033[0m'.format(k, '\033[32m' if v == 'Exists' else '\033[31m', v))
             sys.exit()
         return WebSiteData, saved_images_file_list
 
@@ -400,16 +464,10 @@ class downloader:
     """
     def __init__(self, url: str, option: Dict[str, bool or str or None], parsers='html.parser'):
         self.url: List[str] = url # リスト
-        urllib3.disable_warnings(InsecureRequestWarning)
         self.parser: str = parsers
         self.option: Dict[str, Any] = option
         self.session = requests.Session()
         logger = logging.getLogger('Log of Prop')
-        logger.setLevel(20)
-        self.sh = LoggingHandler()
-        logger.addHandler(self.sh)
-        format = logging.Formatter('%(asctime)s:[%(levelname)s]> %(message)s')
-        self.sh.setFormatter(format)
         self.log = logger.log
         self.parse = parser(self.option, self.log, dl=self)
 
@@ -442,7 +500,7 @@ request urls: {0}
                     sys.exit(1)
                 except (MissingSchema, ConnectionError):
                     raise error.ConnectError(f"Failed to connect to '{url}'")
-                if self.option['check_only']:
+                if self.option['recursive'] or self.option['check_only']:
                     pass
                 elif isinstance(result, list):
                     self._stdout(*result)
@@ -457,7 +515,7 @@ request urls: {0}
                     continue
                 except (MissingSchema, ConnectionError):
                     raise error.ConnectError(f"Failed to connect to '{url}'")
-                if self.option['check_only']:
+                if self.option['recursive'] or self.option['check_only']:
                     pass
                 elif isinstance(result, list):
                     self._stdout(*result)
@@ -484,11 +542,11 @@ request urls: {0}
         if self.option['debug']:
             self.log(20, 'request... '+'\033[32m'+'done'+'\033[0m'+f'  [{len(r.content)} bytes data] {r.elapsed.total_seconds()}s  ')
             if not self.option['info']:
-                tqdm.write(f'\nresponse headers\n\n'+'\n'.join([f'{k}: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
+                tqdm.write(f'\n\033[35m[response headers]\033[0m\n\n'+'\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
         if not self.parse.is_success_status(r.status_code):
             return
         if self.option['check_only'] and not self.option['recursive']:
-            tqdm.write(f'{url} exist')
+            tqdm.write(f'{url}  ... \033[32mExists\033[0m')
             return
         h = history(r.url)
         if self.option['recursive']:
@@ -500,11 +558,11 @@ request urls: {0}
                 cwd = os.getcwd()
                 os.chdir(self.option['filename'])
                 self.log(20, 'parsing...')
-                res: Dict[str, str or bytes] = self.parse.spider(r, h=h, request=self.session, sh=self.sh)
+                res: Dict[str, str or bytes] = self.parse.spider(r, h=h, session=self.session)
                 self.log(20, 'download... '+'\033[32m'+'done'+'\033[0m')
                 self.start_conversion(res)
                 os.chdir(cwd)
-                sys.exit()
+                return
             else:
                 self.log(40, 'the output destination is not a directory or not set')
                 sys.exit(1)
@@ -589,6 +647,8 @@ request urls: {0}
         file: Tuple[str] = self.parse.splitext(url.rstrip('/'))
         # フォーマットを元に保存ファイル名を決める
         save_filename: str = self.option['formated'].replace('%(file)s', self.parse.get_filename(file[0])).replace('%(num)d', str(number))+(file[1] or '.html')
+        if os.path.isfile(save_filename) and not self.ask_continue(f'{save_filename} has already existed\nCan I overwrite?'):
+            return save_filename
         while True:
             try:
                 if isinstance(source, str):
@@ -602,7 +662,7 @@ request urls: {0}
             except Exception as e:
                 # エラーがでた場合、Warningログを表示し続けるか標準入力を受け取る[y/n]
                 self.log(30, e)
-                if self.ask_continue():
+                if self.ask_continue('continue?'):
                     continue
                 else:
                     return
@@ -653,7 +713,7 @@ request urls: {0}
                     break
                 except Exception as e:
                     self.log(30, f'pid: {os.getpid()} {e}')
-                    if self.ask_continue():
+                    if self.ask_continue('continue?'):
                         continue
                     else:
                         break
@@ -668,23 +728,32 @@ request urls: {0}
             old = termios.tcgetattr(fd)
             new = termios.tcgetattr(fd)
             new[3] &= ~termios.ICANON
-            #ECHO(入力された文字を表示するか否かのフラグ)を外す
             new[3] &= ~termios.ECHO
             try:
                 termios.tcsetattr(fd, termios.TCSANOW, new)
                 result = sys.stdin.read(1).lower()
             finally:
-                # fdの属性を元に戻す
                 termios.tcsetattr(fd, termios.TCSANOW, old)
             return result
 
-    def ask_continue(self) -> bool:
+    def ask_continue(self, msg) -> bool:
         while True:
-            print('continue?[y/N]')
+            tqdm.write(f'{msg}[y/N]\n')
+            res = ''
             answer = self.receive()
-            if answer in {'y', 'n'}:
+            while answer != '\n':
+                res += answer
+                tqdm.write(answer, end='')
+                sys.stdout.flush()
+                answer = self.receive()
+            if res in {'y', 'n', 'yes', 'no'}:
                 break
-        return answer == 'y'
+            print('\033[1A\r', end='')
+        print('\033[1A\r\033[1J', end='')
+        print('\033[1A\r\033[1J', end='', file=sys.stderr)
+        sys.stdout.flush()
+        sys.stderr.flush()
+        return res in {'y', 'yes'}
 
 def tor(port=9050):
     return {'http': f'socks5://127.0.0.1:{port}', 'https': f'socks5://127.0.0.1:{port}'}
@@ -692,7 +761,7 @@ def tor(port=9050):
 def help() -> None:
     print("""
 <usage>
-prop <option> [URL]
+prop <option> URL [URL...]
 if you want to read the URL from standard input, please use '-' instead of URL
 
 <List of options>
@@ -758,9 +827,11 @@ If you omit the port number, 9050 will be used.
 And, there are some things you need to do before using this option
 Windows:
 Just run tor.exe
+
 Mac:
 Please enter the following command to start tor
 $ brew services start tor
+
 Linux:
 Please enter the following command to start tor
 $ sudo service tor start
@@ -771,9 +842,9 @@ If you have specified this option and want to output to a file, use> (redirect) 
 
 -s, --search-words [words]
 Extracts and outputs the code such as the specified tag, class, id, etc. from the source code of the site
-If you specify more than one, separate them with % (don't use a space)
+If you specify more than one, separate them with ',' (don't use a space)
 Example of use
-prop -s tags=a%img%script class=test [URL]
+prop -s tags=a,img,script class=test [URL]
 
 >>> Extract and display the code of a tag, img tag, and script tag from the test class
 
@@ -986,9 +1057,13 @@ def argument() -> (list, dict, logging.Logger.log):
         url: list = []
         arg: List[str] = conversion_arg(sys.argv)
         if len(arg) == 1:
-            arg.append("--help")
+            print("""
+prop <options> URL [URL...]
+\033[33mIf you want to see help message, please use '-h', '--help' options and you will see help
+            """)
+            sys.exit(1)
         for n, args in enumerate(arg):
-            if skip or n == 0:
+            if skip:
                 skip -= 1
                 continue
             if args == '-h' or args == '--help':
@@ -1070,9 +1145,9 @@ def argument() -> (list, dict, logging.Logger.log):
                         fl = i.split('=', 2)
                         if len(fl) == 2:
                             if  fl[0] != 'limit' and fl[0] != 'tags':
-                                word['words'][fl[0]] = fl[1].split('%')
+                                word['words'][fl[0]] = fl[1].split(',')
                             elif fl[0] == 'tags':
-                                word['tags'] = fl[1].split('%')
+                                word['tags'] = fl[1].split(',')
                             else:
                                 option.config('limit', int(fl[1]))
                             skip += 1
@@ -1222,29 +1297,30 @@ def argument() -> (list, dict, logging.Logger.log):
                 sys.exit()
             else:
                 url.append(args)
-        return url, option.options, option.log
+        return url, option.fh.file, option.options
 
 def main() -> None:
-    url, option, log = argument()
+    url, log_file, option = argument()
     for index, link in enumerate(url):
         if link == '-':
             link = sys.stdin.readline().rstrip()
         url[index] = link
-    if url != [] and not (isinstance(option, dict) and option['parse']):
-        if isinstance(option, list):
-            dl: downloader = downloader(url[0], option[0], option[0]['parser'])
-            start(dl)
-            for u, o in zip(url[1:], option[1:]):
-                dl.url = u
-                dl.option = o
-                dl.parse.option = o
+    with log_file:
+        if url != [] and not (isinstance(option, dict) and option['parse']):
+            if isinstance(option, list):
+                dl: downloader = downloader(url[0], option[0], option[0]['parser'])
                 start(dl)
-        else:
+                for u, o in zip(url[1:], option[1:]):
+                    dl.url = u
+                    dl.option = o
+                    dl.parse.option = o
+                    start(dl)
+            else:
+                dl: downloader = downloader(url, option, option['parser'])
+                start(dl)
+        elif option['parse']:
             dl: downloader = downloader(url, option, option['parser'])
-            start(dl)
-    elif option['parse']:
-        dl: downloader = downloader(url, option, option['parser'])
-        print(dl.parse.html_extraction(option['parse'], option['search']))
+            print(dl.parse.html_extraction(option['parse'], option['search']))
 
 def start(dl):
     if dl.option['caperror']:
@@ -1252,15 +1328,14 @@ def start(dl):
             dl.start()
         except ConnectTimeout:
             dl.log(40, "didn't connect")
-            log(40, f"Connection Error\n'{url}'")
+            dl.log(40, f"Connection Error\n'{url}'")
         except ReadTimeout:
             dl.log(40, 'timeouted')
-            log(40, f"Timed out while downloading '{url}'")
+            dl.log(40, f"Timed out while downloading '{url}'")
         except error.ConnectError as e:
             dl.log(40, e)
         except Exception as e:
             dl.log(40, e)
-            log(40, e)
     else:
         try:
             dl.start()

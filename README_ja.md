@@ -40,18 +40,39 @@ propをアップデートします
 |  text  |  タグの値  |
 |  href  |  参照先  |
 |  src  |  画像などの参照先  |
-|  limit  |  取得数  |
+|  limit  |  取得数(-Mオプションでも指定可)  |
 
 また、値を複数指定する場合は、%で区切って指定してください(空白はいれない)
 
 Ex:
+
 ```bash
 $ prop -s tags=a%script limit=5 URL
 
 -> URLのソースコードからaタグとscriptタグを合計で5つ取得
 ```
 
-## -r [下る階層の数]
+## -M, --limit [limit]
+再帰ダウンロードするファイルの数や、-s, --searchオプションの結果の取得数の指定
+
+## -R, --read-file [file]
+URLやオプションの指定を予め記述してあるファイルから読み込みます  
+また、セッションは保持されるため、ログインしてからアクセスするといったことも可能です
+
+Ex:  
+instruct.txtの中身
+
+```
+-a -n -d name=hoge password=hogehoge -o /dev/null https://www.example.com/login.php
+-O https://www.example.com/page.html
+```
+
+```bash
+$ prop -R instruct.txt
+>>> https://www.example.com/page.htmlをpage.htmlとしてダウンロード
+```
+
+## -r, --recursive [下る階層の数]
 指定されたURLを起点として再帰ダウンロードします  
 下る階層の数を指定しなかった場合は1が指定されたものとして実行します  
 再帰ダウンロードの対象はaタグのhref属性とimgのsrc属性に指定されているURLです  
@@ -68,15 +89,13 @@ $ prop -s tags=a%script limit=5 URL
 再帰ダウンロードは対象のサイトに過剰な負荷をかけることがあるので、5秒以上の指定を推奨します  
 また、robots.txtの指示よりも短い時間が指定されている場合は、robots.txtの数値に置き換えられます
 
-#### -M, --limit [limit]
-ダウンロードするファイルの数を指定します
-
 #### -f, --format [format]
 ダウンロードするファイルのファイル名のフォーマットを指定することができます  
 特殊なフォーマットは以下の通りです
 
 |  フォーマット  |  代入される値  |
 |  ----  |  ----  |
+|  %(root)s  |  ダウンロード元のホスト名  |
 |  %(file)s  |  ダウンロード元のファイル名  |
 |  %(num)d  |  0から始まる連番  |
 
@@ -87,6 +106,8 @@ $ prop -r -f %(num)dtest-%(file)s -o store_ directory URL
 
 -> store_directory/0test-[filename], store_directory/1test-[filename] ...という名前でダウンロード
 ```
+
+※フォーマットに%(num)d、または%(file)sが含まれていない場合、反映されないので注意して下さい(ファイル名が動的に変化しないため)
 
 ## ダウンロード対象を制限(拡張)するオプション
 |  短縮オプション名  |  長いオプション名  |  処理  |
@@ -127,7 +148,7 @@ $ rm -r $(prop --history-directory)
 
 # 何故これを作ったのか
 wgetの再帰ダウンロードって確かファイル名のフォーマット決められなかったんですよ  
-なので作りました(せっかくなので自分が使う機能も詰め合わせた)
+なので作りました(せっかくなので機能をたくさん詰め合わせた)
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
