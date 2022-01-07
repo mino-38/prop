@@ -1300,10 +1300,10 @@ prop <options> URL [URL...]
                 sys.exit()
             else:
                 url.append(args)
-        return url, option.fh.file, option.options, option.log
+        return url, option.fh.file, option.options
 
 def main() -> None:
-    url, log_file, option, log = argument()
+    url, log_file, option = argument()
     for index, link in enumerate(url):
         if link == '-':
             link = sys.stdin.readline().rstrip()
@@ -1312,34 +1312,33 @@ def main() -> None:
         if url != [] and not (isinstance(option, dict) and option['parse']):
             if isinstance(option, list):
                 dl: downloader = downloader(url[0], option[0], option[0]['parser'])
-                start(dl, log)
+                start(dl)
                 for u, o in zip(url[1:], option[1:]):
                     dl.url = u
                     dl.option = o
                     dl.parse.option = o
-                    start(dl, log)
+                    start(dl)
             else:
                 dl: downloader = downloader(url, option, option['parser'])
-                start(dl, log)
+                start(dl)
         elif option['parse']:
             dl: downloader = downloader(url, option, option['parser'])
             print(dl.parse.html_extraction(option['parse'], option['search']))
 
-def start(dl, log):
+def start(dl):
     if dl.option['caperror']:
         try:
             dl.start()
         except ConnectTimeout:
             dl.log(40, "didn't connect")
-            log(40, f"Connection Error\n'{url}'")
+            dl.log(40, f"Connection Error\n'{url}'")
         except ReadTimeout:
             dl.log(40, 'timeouted')
-            log(40, f"Timed out while downloading '{url}'")
+            dl.log(40, f"Timed out while downloading '{url}'")
         except error.ConnectError as e:
             dl.log(40, e)
         except Exception as e:
             dl.log(40, e)
-            log(40, e)
     else:
         try:
             dl.start()
