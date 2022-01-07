@@ -542,7 +542,7 @@ request urls: {0}
         if self.option['debug']:
             self.log(20, 'request... '+'\033[32m'+'done'+'\033[0m'+f'  [{len(r.content)} bytes data] {r.elapsed.total_seconds()}s  ')
             if not self.option['info']:
-                tqdm.write(f'\nresponse headers\n\n'+'\n'.join([f'{k}: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
+                tqdm.write(f'\n\033[35m[response headers]\033[0m\n\n'+'\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
         if not self.parse.is_success_status(r.status_code):
             return
         if self.option['check_only'] and not self.option['recursive']:
