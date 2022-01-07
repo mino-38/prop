@@ -1,11 +1,5 @@
 __pycache__/
 prop.egg-info/
-<<<<<<< HEAD
-prop-log.log
-build/
-=======
-data/
 prop-log.log
 build/
 history/
->>>>>>> develop
