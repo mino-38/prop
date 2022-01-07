@@ -107,11 +107,7 @@ $ prop -r -f %(num)dtest-%(file)s -o store_ directory URL
 -> store_directory/0test-[filename], store_directory/1test-[filename] ...という名前でダウンロード
 ```
 
-<<<<<<< HEAD
 ※フォーマットに%(num)d、または%(file)sが含まれていない場合、反映されないので注意して下さい(保存名が動的に変化しないため)
-=======
-※フォーマットに%(num)d、または%(file)sが含まれていない場合、反映されないので注意して下さい(ファイル名が動的に変化しないため)
->>>>>>> develop
 
 ## ダウンロード対象を制限(拡張)するオプション
 |  短縮オプション名  |  長いオプション名  |  処理  |
