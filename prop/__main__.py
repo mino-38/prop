@@ -1047,7 +1047,7 @@ def _argsplit(args):
         elif continue_:
             s.append(v)
         else:
-            result.append(v)
+            result.append(v.strip("'\""))
     return result
 
 def argument() -> (list, dict, logging.Logger.log):
