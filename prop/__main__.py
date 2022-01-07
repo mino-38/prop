@@ -18,14 +18,14 @@ from urllib.parse import urldefrag, urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup as bs
+from fake_useragent import FakeUserAgentError, UserAgent
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import (ConnectionError, ConnectTimeout,
                                  MissingSchema, ReadTimeout)
 from requests.packages import urllib3
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from robotsparsetools import NotFoundError, Parse
 from tqdm import tqdm
-from requests.packages.urllib3.exceptions import InsecureRequestWarning
-from fake_useragent import UserAgent, FakeUserAgentError
 
 try:
     import msvcrt
@@ -500,7 +500,7 @@ request urls: {0}
                     sys.exit(1)
                 except (MissingSchema, ConnectionError):
                     raise error.ConnectError(f"Failed to connect to '{url}'")
-                if self.option['check_only']:
+                if self.option['recursive'] or self.option['check_only']:
                     pass
                 elif isinstance(result, list):
                     self._stdout(*result)
@@ -515,7 +515,7 @@ request urls: {0}
                     continue
                 except (MissingSchema, ConnectionError):
                     raise error.ConnectError(f"Failed to connect to '{url}'")
-                if self.option['check_only']:
+                if self.option['recursive'] or self.option['check_only']:
                     pass
                 elif isinstance(result, list):
                     self._stdout(*result)
@@ -546,7 +546,7 @@ request urls: {0}
         if not self.parse.is_success_status(r.status_code):
             return
         if self.option['check_only'] and not self.option['recursive']:
-            tqdm.write(f'{url} exist')
+            tqdm.write(f'{url}  ... \033[32mExists\033[0m')
             return
         h = history(r.url)
         if self.option['recursive']:
@@ -562,7 +562,7 @@ request urls: {0}
                 self.log(20, 'download... '+'\033[32m'+'done'+'\033[0m')
                 self.start_conversion(res)
                 os.chdir(cwd)
-                sys.exit()
+                return
             else:
                 self.log(40, 'the output destination is not a directory or not set')
                 sys.exit(1)
