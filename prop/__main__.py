@@ -1177,7 +1177,7 @@ def argument() -> (list, dict, logging.Logger.log):
                 option.config('no_downloaded', True)
             elif args == '-f' or args == '--format':
                 string: str = arg[n+1]
-                if '%(file)s' in string:
+                if '%(file)s' in string or '%(num)d' in string:
                     option.config('format', string)
                 skip += 1
             elif args == '-F' or args == '--information':
