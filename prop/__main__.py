@@ -66,7 +66,7 @@ class LoggingFileHandler(logging.Handler):
 
     def emit(self, record):
         try:
-            record.msg = re.sub('\033\[[+-]?\d+m', '', record.msg)
+            record.msg = re.sub('\033\[[+-]?\d+m', '', str(record.msg))
             msg = self.format(record)
             self.file.write(msg)
             self.file.write('\n')
@@ -87,9 +87,12 @@ class setting:
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
+        sh = LoggingHandler()
         self.fh = LoggingFileHandler(setting.log_file)
+        logger.addHandler(sh)
         logger.addHandler(self.fh)
-        format = logging.Formatter('%(asctime)s:%(lineno)d:%(levelname)s:\n%(message)s')
+        format = logging.Formatter('%(asctime)s:[%(levelname)s]> %(message)s')
+        sh.setFormatter(format)
         self.fh.setFormatter(format)
         self.log = logger.log
 
@@ -290,7 +293,7 @@ class parser:
                 break
         return data
 
-    def spider(self, response, *, h=sys.stdout, session, sh) -> Tuple[dict, list]:
+    def spider(self, response, *, h=sys.stdout, session) -> Tuple[dict, list]:
         """
         HTMLからaタグとimgタグの参照先を抽出し保存
         """
@@ -466,11 +469,6 @@ class downloader:
         self.option: Dict[str, Any] = option
         self.session = requests.Session()
         logger = logging.getLogger('Log of Prop')
-        logger.setLevel(20)
-        self.sh = LoggingHandler()
-        logger.addHandler(self.sh)
-        format = logging.Formatter('%(asctime)s:[%(levelname)s]> %(message)s')
-        self.sh.setFormatter(format)
         self.log = logger.log
         self.parse = parser(self.option, self.log, dl=self)
 
@@ -561,7 +559,7 @@ request urls: {0}
                 cwd = os.getcwd()
                 os.chdir(self.option['filename'])
                 self.log(20, 'parsing...')
-                res: Dict[str, str or bytes] = self.parse.spider(r, h=h, session=self.session, sh=self.sh)
+                res: Dict[str, str or bytes] = self.parse.spider(r, h=h, session=self.session)
                 self.log(20, 'download... '+'\033[32m'+'done'+'\033[0m')
                 self.start_conversion(res)
                 os.chdir(cwd)
