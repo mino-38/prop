@@ -17,14 +17,14 @@ from urllib.error import URLError
 from urllib.parse import urldefrag, urljoin, urlparse
 
 import requests
-import urllib3
 from bs4 import BeautifulSoup as bs
 from requests.auth import HTTPBasicAuth
 from requests.exceptions import (ConnectionError, ConnectTimeout,
                                  MissingSchema, ReadTimeout)
+from requests.packages import urllib3
 from robotsparsetools import NotFoundError, Parse
 from tqdm import tqdm
-from urllib3.exceptions import InsecureRequestWarning
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from fake_useragent import UserAgent, FakeUserAgentError
 
 try:
