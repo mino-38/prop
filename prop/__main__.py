@@ -1309,6 +1309,7 @@ prop <options> URL [URL...]
                 option.config('parse', html)
             elif args == '--clear':
                 option.clear()
+                sys.exit()
             elif args == "--config-file":
                 print(setting.config_file)
                 sys.exit()
