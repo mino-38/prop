@@ -1066,8 +1066,8 @@ def argument() -> (list, dict, logging.Logger.log):
         if len(arg) == 1:
             print("""
 prop <options> URL [URL...]
-\033[33mIf you want to see help message, please use '-h', '--help' options and you will see help
-            """)
+
+\033[33mIf you want to see help message, please use '-h', '--help' options and you will see help""")
             sys.exit(1)
         for n, args in enumerate(arg):
             if skip:
