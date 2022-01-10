@@ -1348,7 +1348,7 @@ def main() -> None:
             dl: downloader = downloader(url, option, option['parser'])
             print(dl.parse.html_extraction(option['parse'], option['search']))
         elif url == []:
-            error.print("Missing argument option for URL\nPlease specify URL")
+            error.print('Missing value for URL\nPlease specify URL')
 
 def start(dl):
     if dl.option['caperror']:
