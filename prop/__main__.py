@@ -50,7 +50,7 @@ class error:
     @staticmethod
     def print(msg):
         print(f"\033[31m{msg}\033[0m", file=sys.stderr)
-        print("\033[33mIf you don't know how to use, please use '-h', '--help' and you will see help message\033[0m", file=sys.stderr)
+        print("\n\033[33mIf you don't know how to use, please use '-h', '--help' options and you will see help message\033[0m", file=sys.stderr)
         sys.exit(1)
 
 class LoggingHandler(logging.Handler):
