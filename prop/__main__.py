@@ -1110,7 +1110,7 @@ prop <options> URL [URL...]
                 option.config('notimeout', True)
             elif args == '-x' or args == '--method':
                 try:
-                    gethod = arg[n+1].lower()
+                    method = arg[n+1].lower()
                 except IndexError:
                     error.print(f"{args} [method]\nPlease specify '{args}'s value")
                 if method in {'get', 'post', 'put', 'delete'}:
