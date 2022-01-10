@@ -47,6 +47,12 @@ class error:
     class ConnectError(Exception):
         pass
 
+    @staticmethod
+    def print(msg):
+        print(f"\033[31m{msg}\033[0m", file=sys.stderr)
+        print("\033[33mIf you don't know how to use, please use '-h', '--help' and you will see help message\033[0m", file=sys.stderr)
+        sys.exit(1)
+
 class LoggingHandler(logging.Handler):
     color = {'INFO': '\033[36mINFO\033[0m', 'WARNING': '\033[33mWARNING\033[0m', 'WARN': '\033[33mWARN\033[0m', 'ERROR': '\033[31mERROR\033[0m'}
     def __init__(self, level=logging.NOTSET):
@@ -475,7 +481,7 @@ class downloader:
         """
         URLに対してリスエストを送る前準備と実行
         """
-        methods: dict = {'get': self.session.get, 'post': self.session.post, 'put': self.session.put, 'delete': self.session.delete, 'head': self.session.get, 'options': self.session.options}
+        methods: dict = {'get': self.session.get, 'post': self.session.post, 'put': self.session.put, 'delete': self.session.delete}
         instance: requests = methods.get(self.option['types'])
         if self.option['debug']:
             self.log(20, """
@@ -788,10 +794,11 @@ Also, the -i option takes precedence over this option.
 Communicate by specifying the communication method
 The default is get
 Communication that can be specified with -x, --method option
-get
-post
-delete
-put put
+
+- get
+- post
+- delete
+- put
 
 -S, --ignore-SSL
 Ignore SSL certificate validation
@@ -1071,7 +1078,10 @@ prop <options> URL [URL...]
                 sys.exit()
             elif args == '-o' or args == '--output':
                 # 出力先ファイルの設定
-                filename: str = arg[n+1]
+                try:
+                    filename: str = arg[n+1]
+                except IndexError:
+                    error.print(f"{args} [filename]\nPlease specify '{args}'s value")
                 if filename != '-':
                     option.config('filename', os.path.join('.', filename))
                     option.config('output', False)
@@ -1085,16 +1095,28 @@ prop <options> URL [URL...]
                 option.config('output', False)
                 option.config('bytes', True)
             elif args == '-t' or args == '--timeout':
-                timeout: int = arg[n+1]
+                try:
+                    timeout: int = arg[n+1]
+                except IndexError:
+                    error.print(f"{args} [timeout]\nPlease specify '{args}'s value")
                 if option.options.get('notimeout') is None:
-                    option.config('timeout', (3.0, float(timeout)))
+                    try:
+                        option.config('timeout', (3.0, float(timeout)))
+                    except ValueError:
+                        error.print(f"'{timeout}' is not int or float\nPlease specify int or float")
                 skip += 1
             elif args == '-i' or args == '--ignore':
                 option.config('timeout', None)
                 option.config('notimeout', True)
             elif args == '-x' or args == '--method':
-                method = arg[n+1].lower()
-                option.config('types', method)
+                try:
+                    gethod = arg[n+1].lower()
+                except IndexError:
+                    error.print(f"{args} [method]\nPlease specify '{args}'s value")
+                if method in {'get', 'post', 'put', 'delete'}:
+                    option.config('types', method)
+                else:
+                    error.print(f"{method} is unknown method")
                 skip += 1
             elif args == '-S' or args == '--ignore-SSL':
                 option.config('ssl', False)
@@ -1109,8 +1131,7 @@ prop <options> URL [URL...]
                         sys.stderr = _stderr
                 except Exception as e:
                     sys.stderr = _stderr
-                    print(e, file=sys.stderr)
-                    continue
+                    error.print(str(e))
                 try:
                     fake = ua[arg[n+1]]
                     skip += 1
@@ -1130,6 +1151,8 @@ prop <options> URL [URL...]
                         skip += 1
                     else:
                         break
+                if not params and not header:
+                    error.print(f"Please specify the value of the '{args}' option")
                 if args == '-d' or args == '--data':
                     option.config('payload', params)
                 elif args == '-c' or args == '--cookie':
@@ -1160,31 +1183,35 @@ prop <options> URL [URL...]
                     option.config('search', word)
                     option.config('bytes', True)
                 except (error.ArgsError, IndexError):
-                    print(f'the specifying the argument of the {args} option is incorrect.', file=sys.stderr)
+                    error.print(f'The specifying the argument of the {args} option is incorrect')
                     sys.exit(1)
                 except ValueError:
-                    print(f'Error: {fl[1]}\nplease type number')
+                    error.print(f'{fl[1]} is not number\nPlease specify number')
             elif args == '-l' or args == '--no-redirect':
                 option.config('redirect', False)
             elif args == '-D' or args == '-D': 
                 option.config('debug', True)
             elif args == '-u' or args == '--upload':
-                path = arg[n+1]
+                try:
+                    path = arg[n+1]
+                except IndexError:
+                    error.print(f"{args} [filepath]\nPlease specify '{args}'s value")
                 if os.path.exists(path):
                     option.config('upload', path)
                 else:
-                    print(f'the existence could not be confirmed: {path}', file=sys.stderr)
-                    sys.exit(1)
+                    error.print(f'The existence could not be confirmed: {path}')
             elif args == '-X' or args == '--proxy':
                 try:
                     proxy_url: str = arg[n+1]
                 except IndexError:
-                    print('please specify proxies.')
-                    sys.exit(1)
+                    error.print('Please specify proxies')
                 option.config('proxy', {"http": proxy_url, "https": proxy_url})
                 skip += 1
             elif args == '-R' or args == '--read-file':
-                file: str = arg[n+1]
+                try:
+                    file: str = arg[n+1]
+                except IndexError:
+                    error.print(f"{args} [filepath]\nPlease specify '{args}'s value")
                 urls: list = []
                 options: list = []
                 with open(file, 'r') as f:
@@ -1224,9 +1251,8 @@ prop <options> URL [URL...]
                 try:
                     option.config("start", arg[n+1])
                     skip += 1
-                except:
-                    print(f'please specify "{args}"\'s value')
-                    sys.exit(1)
+                except IndexError:
+                    error.print(f"{args} [startname]\nPlease specify '{args}'s value")
             elif args == '-np' or args == '--no-parent':
                 option.config('noparent', True)
             elif args in {'-nc', '-nb', '--no-content', '--no-body'}:
@@ -1236,11 +1262,9 @@ prop <options> URL [URL...]
                     limit = int(arg[n+1])
                     skip += 1
                 except IndexError:
-                    print('please set value of limit')
-                    sys.exit(1)
+                    error.print(f"{args} [limit]\nPlease specify '{args}'s value")
                 except ValueError:
-                    print('please specify a number for the value of limit')
-                    sys.exit(1)
+                    error.print('Please specify a number for the value of limit')
                 option.config('limit', limit)
             elif args == '-e' or args == '--no-catch-error':
                 option.config('caperror', False)
@@ -1251,7 +1275,10 @@ prop <options> URL [URL...]
             elif args == '-nd' or args == '--no-downloaded':
                 option.config('no_downloaded', True)
             elif args == '-f' or args == '--format':
-                string: str = arg[n+1]
+                try:
+                    string: str = arg[n+1]
+                except IndexError:
+                    error.print(f"{args} [format]\nPlease specify '{args}'s value")
                 if '%(file)s' in string:
                     option.config('format', string)
                 skip += 1
@@ -1262,9 +1289,10 @@ prop <options> URL [URL...]
                     interval: float = float(arg[n+1])
                     option.config('interval', interval)
                     skip += 1
-                except (IndexError, ValueError):
-                    print(f'please specify the argument of the {args} option')
-                    sys.exit(1)
+                except IndexError:
+                    error.print(f"{args} [interval]\nPlease specify '{args}'s value")
+                except ValueError:
+                    error.print(f"Please specify int or float to '{args}'s value")
             elif args == '-m' or args == '--multiprocess':
                 option.config('multiprocess', True)
             elif args == '--tor':
