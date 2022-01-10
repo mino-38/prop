@@ -343,7 +343,7 @@ class parser:
             if self.option['debug']:
                 self.log(20, 'robots.txt was none')
         source: List[bytes] = [response.content]
-        print(f'histories are saved in {h.history_file}', file=sys.stderr)
+        print(f"histories are saved in '{h.history_file}'", file=sys.stderr)
         for n in range(self.option['recursive']):
             for source, cwd_url in zip(source, cwd_urls):
                 datas = bs(source, self.parser)
@@ -1183,7 +1183,7 @@ prop <options> URL [URL...]
                     option.config('search', word)
                     option.config('bytes', True)
                 except (error.ArgsError, IndexError):
-                    error.print(f'The specifying the argument of the {args} option is incorrect')
+                    error.print(f'The specifying the argument of the '{args}' option is incorrect')
                     sys.exit(1)
                 except ValueError:
                     error.print(f'{fl[1]} is not number\nPlease specify number')
@@ -1230,7 +1230,7 @@ prop <options> URL [URL...]
                     option.config('auth', HTTPBasicAuth(user, password))
                     skip += 2
                 except:
-                    print(f'the specifying the argument of the {args} option is incorrect\n{args} [UserName] [Password]', file=sys.stderr)
+                    error.print(f"{args} [UserName] [Password]\nThe specifying the argument of the '{args}' option is incorrect")
                     sys.exit(1)
             elif args == '-r' or args == '--recursive':
                 try:
@@ -1245,14 +1245,14 @@ prop <options> URL [URL...]
                 if result2:
                     option.config('body', False)
                 if result1 and result2:
-                    print('the -nc and -nb options cannot be used together', file=sys.stderr)
+                    error.print("'-nc' and '-nb' options can't be used together")
                     sys.exit(1)
             elif args == '-st' or args == '--start':
                 try:
                     option.config("start", arg[n+1])
                     skip += 1
                 except IndexError:
-                    error.print(f"{args} [startname]\nPlease specify '{args}'s value")
+                    error.print(f"{args} [StartName]\nPlease specify '{args}'s value")
             elif args == '-np' or args == '--no-parent':
                 option.config('noparent', True)
             elif args in {'-nc', '-nb', '--no-content', '--no-body'}:
