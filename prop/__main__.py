@@ -1183,8 +1183,7 @@ prop <options> URL [URL...]
                     option.config('search', word)
                     option.config('bytes', True)
                 except (error.ArgsError, IndexError):
-                    error.print(f'The specifying the argument of the '{args}' option is incorrect')
-                    sys.exit(1)
+                    error.print(f"The specifying the argument of the '{args}' option is incorrect")
                 except ValueError:
                     error.print(f'{fl[1]} is not number\nPlease specify number')
             elif args == '-l' or args == '--no-redirect':
@@ -1204,7 +1203,7 @@ prop <options> URL [URL...]
                 try:
                     proxy_url: str = arg[n+1]
                 except IndexError:
-                    error.print('Please specify proxies')
+                    error.print(f"{args} [Proxy]\nPlease specify '{args}'s value")
                 option.config('proxy', {"http": proxy_url, "https": proxy_url})
                 skip += 1
             elif args == '-R' or args == '--read-file':
@@ -1231,7 +1230,6 @@ prop <options> URL [URL...]
                     skip += 2
                 except:
                     error.print(f"{args} [UserName] [Password]\nThe specifying the argument of the '{args}' option is incorrect")
-                    sys.exit(1)
             elif args == '-r' or args == '--recursive':
                 try:
                     number: int = int(arg[n+1])
