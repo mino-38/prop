@@ -1152,7 +1152,7 @@ prop <options> URL [URL...]
                     else:
                         break
                 if not params and not header:
-                    error.print(f"Please specify the value of the '{args}' option")
+                    error.print(f"{args} [Name=Value] [Name=Value]...\nPlease specify the value of the '{args}' option")
                 if args == '-d' or args == '--data':
                     option.config('payload', params)
                 elif args == '-c' or args == '--cookie':
