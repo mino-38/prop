@@ -146,6 +146,7 @@ $ rm -r $(prop --history-directory)
 
 # 追加予定の機能
 - 今のところ不便なく使えてるので無し
+- だけど引数解析部分のエラーキャッチが甘いと思ってるので直したい
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
