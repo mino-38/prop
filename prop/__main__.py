@@ -1116,7 +1116,7 @@ prop <options> URL [URL...]
                 if method in {'get', 'post', 'put', 'delete'}:
                     option.config('types', method)
                 else:
-                    error.print(f"{method} is unknown method")
+                    error.print(f"'{method}' is unknown method")
                 skip += 1
             elif args == '-S' or args == '--ignore-SSL':
                 option.config('ssl', False)
