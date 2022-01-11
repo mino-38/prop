@@ -74,8 +74,8 @@ class LoggingFileHandler(logging.Handler):
 
     def emit(self, record):
         try:
-            record.msg = re.sub('\033\\[[+-]?\d+m', '', str(record.msg))
-            record.levelname = re.sub('\033\\[[+-]?\d+m', '', record.levelname)
+            record.msg = re.sub('\033\\[[+-]?\\d+m', '', str(record.msg))
+            record.levelname = re.sub('\033\\[[+-]?\\d+m', '', record.levelname)
             msg = self.format(record)
             self.file.write(msg)
             self.file.write('\n')
@@ -282,13 +282,12 @@ class parser:
             if dns:
                 try:
                     hostname = self.get_hostname(target_url)
-                    if hostname in did_host:
-                        continue
-                    if not hostname:
-                        raise gaierror()
-                    if self.option['debug']:
-                        self.log(20, f"it be querying the DNS server for '{hostname}' now...")
-                    i = self.query_dns(hostname)
+                    if not hostname in did_host:
+                        if not hostname:
+                            raise gaierror()
+                        if self.option['debug']:
+                            self.log(20, f"it be querying the DNS server for '{hostname}' now...")
+                        i = self.query_dns(hostname)
                 except gaierror:
                     self.log(30, f"it skiped {target_url} because there was no response from the DNS server")
                     continue
@@ -298,7 +297,7 @@ class parser:
                     dns = False
                     did_host.add(hostname)
             data[url] = self.delete_query(target_url)
-            if cut and 0 < self.option['limit'] <= len(data):
+            if cut and self.option['limit'] <= len(data):
                 break
         return data
 
@@ -311,7 +310,7 @@ class parser:
         saved_images_file_list: list = []
         count = 0
         max = self.option['interval']+3
-        css_file = os.path.join('styles', 'prop_css_info.json')
+        info_file = os.path.join('styles', '.prop_info.json')
         if self.option['no_downloaded']:
             downloaded: set = h.read()
         else:
@@ -348,20 +347,21 @@ class parser:
             for source, cwd_url in zip(source, cwd_urls):
                 datas = bs(source, self.parser)
                 if self.option['body']:
-                    a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) #aタグ抽出
+                    a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, WebSiteData, downloaded, is_ok, bool(self.option['limit'])) #aタグ抽出
                     link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, WebSiteData, downloaded, is_ok, False) # rel=stylesheetのlinkタグを抽出
                 if self.option['content']:
-                    img_data: dict = self._cut(datas.find_all('img'), 'src', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) # imgタグ抽出
+                    img_data: dict = self._cut(datas.find_all('img'), 'src', cwd_url, response, root_url, WebSiteData, downloaded, is_ok, bool(self.option['limit'])) # imgタグ抽出
                 self.option['header']['Referer'] = cwd_url
                 if self.option['body']:
-                    if not os.path.isfile(css_file) and not self.option['check_only']:
+                    if not os.path.isfile(info_file) and not self.option['check_only']:
                         os.mkdir('styles')
+                        self.log(20, 'loading stylesheets...')
                         if self.option['progress']:
                             link_info = tqdm(link_data.items())
                         else:
                             link_info = link_data.items()
                         before_fmt = self.dl.option['formated']
-                        self.dl.option['formated'] = os.path.join('styles', self.dl.option['formated'])
+                        self.dl.option['formated'] = os.path.join('styles', '%(file)s')
                         for from_url, target_url in link_info:
                             for i in range(self.option['reconnect']+1):
                                 try:
@@ -381,11 +381,9 @@ class parser:
                                         self.log(30, e)
                                     sleep(1)
                                     continue
-                        with open(css_file, 'w') as f:
-                            json.dump(WebSiteData, f, indent=4)
                         self.dl.option['formated'] = before_fmt
                     elif not self.option['check_only']:
-                        with open(css_file, 'r') as f:
+                        with open(info_file, 'r') as f:
                             WebSiteData.update(json.load(f))
                     if self.option['progress']:
                         a_info = tqdm(a_data.items())
@@ -461,6 +459,10 @@ class parser:
             for k, v in WebSiteData.items():
                 print('{}  ... {}{}\033[0m'.format(k, '\033[32m' if v == 'Exists' else '\033[31m', v))
             sys.exit()
+        else:
+            if os.path.isdir('styles'):
+                with open(info_file, 'w') as f:
+                    json.dump(WebSiteData, f, indent=4, ensure_ascii=False)
         return WebSiteData, saved_images_file_list
 
 class downloader:
@@ -487,13 +489,14 @@ class downloader:
             self.log(20, """
 request urls: {0}
 {1}
-            """.format(self.url, '\n'.join([f'{k}: {v}' for k, v in self.option.items()])))
+            """.format(self.url, '\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in self.option.items()])))
         if self.option['progress'] and not self.option['recursive']:
             for url in tqdm(self.url):
                 try:
                     hostname = self.parse.get_hostname(url)
                     if not hostname:
-                        raise error.ArgsError(f"It determined that '{url}' is not url")
+                        self.log(40, f"'{url}' is not url")
+                        continue
                     self.log(20, f"it be querying the DNS server for '{hostname}' now...")
                     i = self.parse.query_dns(hostname)
                     self.log(20, f"request start {url} [{i[0][-1][0]}]")
@@ -515,7 +518,11 @@ request urls: {0}
         else:
             for url in self.url:
                 try:
-                    i = self.parse.query_dns(url)
+                    hostname = self.parse.get_hostname(url)
+                    if not hostname:
+                        self.log(40, f"'{url}' is not url")
+                        continue
+                    i = self.parse.query_dns(hostname)
                     result = self.request(url, instance)
                 except gaierror:
                     continue
@@ -709,8 +716,6 @@ request urls: {0}
                     with open(path, 'r') as f:
                         source: str = f.read()
                     for from_, to in all_download_data[0].items():
-                        if from_ in {'#', '?'}:
-                            continue
                         source = source.replace(from_, to)
                     with open(path, 'w') as f:
                         f.write(source)
@@ -1081,7 +1086,7 @@ prop <options> URL [URL...]
                 try:
                     filename: str = arg[n+1]
                 except IndexError:
-                    error.print(f"{args} [filename]\nPlease specify '{args}'s value")
+                    error.print(f"{args} [filename]\nPlease specify value of '{args}'")
                 if filename != '-':
                     option.config('filename', os.path.join('.', filename))
                     option.config('output', False)
@@ -1098,7 +1103,7 @@ prop <options> URL [URL...]
                 try:
                     timeout: int = arg[n+1]
                 except IndexError:
-                    error.print(f"{args} [timeout]\nPlease specify '{args}'s value")
+                    error.print(f"{args} [timeout]\nPlease specify value of '{args}'")
                 if option.options.get('notimeout') is None:
                     try:
                         option.config('timeout', (3.0, float(timeout)))
@@ -1112,7 +1117,7 @@ prop <options> URL [URL...]
                 try:
                     method = arg[n+1].lower()
                 except IndexError:
-                    error.print(f"{args} [method]\nPlease specify '{args}'s value")
+                    error.print(f"{args} [method]\nPlease specify value of '{args}'")
                 if method in {'get', 'post', 'put', 'delete'}:
                     option.config('types', method)
                 else:
@@ -1194,7 +1199,7 @@ prop <options> URL [URL...]
                 try:
                     path = arg[n+1]
                 except IndexError:
-                    error.print(f"{args} [filepath]\nPlease specify '{args}'s value")
+                    error.print(f"{args} [filepath]\nPlease specify value of '{args}'")
                 if os.path.exists(path):
                     option.config('upload', path)
                 else:
@@ -1203,14 +1208,14 @@ prop <options> URL [URL...]
                 try:
                     proxy_url: str = arg[n+1]
                 except IndexError:
-                    error.print(f"{args} [Proxy]\nPlease specify '{args}'s value")
+                    error.print(f"{args} [Proxy]\nPlease specify value of '{args}'")
                 option.config('proxy', {"http": proxy_url, "https": proxy_url})
                 skip += 1
             elif args == '-R' or args == '--read-file':
                 try:
                     file: str = arg[n+1]
                 except IndexError:
-                    error.print(f"{args} [filepath]\nPlease specify '{args}'s value")
+                    error.print(f"{args} [filepath]\nPlease specify value of '{args}'")
                 urls: list = []
                 options: list = []
                 with open(file, 'r') as f:
@@ -1250,7 +1255,7 @@ prop <options> URL [URL...]
                     option.config("start", arg[n+1])
                     skip += 1
                 except IndexError:
-                    error.print(f"{args} [StartName]\nPlease specify '{args}'s value")
+                    error.print(f"{args} [StartName]\nPlease specify value of '{args}'")
             elif args == '-np' or args == '--no-parent':
                 option.config('noparent', True)
             elif args in {'-nc', '-nb', '--no-content', '--no-body'}:
@@ -1260,7 +1265,7 @@ prop <options> URL [URL...]
                     limit = int(arg[n+1])
                     skip += 1
                 except IndexError:
-                    error.print(f"{args} [limit]\nPlease specify '{args}'s value")
+                    error.print(f"{args} [limit]\nPlease specify value of '{args}'")
                 except ValueError:
                     error.print('Please specify a number for the value of limit')
                 option.config('limit', limit)
@@ -1276,7 +1281,7 @@ prop <options> URL [URL...]
                 try:
                     string: str = arg[n+1]
                 except IndexError:
-                    error.print(f"{args} [format]\nPlease specify '{args}'s value")
+                    error.print(f"{args} [format]\nPlease specify value of '{args}'")
                 if '%(file)s' in string:
                     option.config('format', string)
                 skip += 1
@@ -1288,9 +1293,9 @@ prop <options> URL [URL...]
                     option.config('interval', interval)
                     skip += 1
                 except IndexError:
-                    error.print(f"{args} [interval]\nPlease specify '{args}'s value")
+                    error.print(f"{args} [interval]\nPlease specify value of '{args}'")
                 except ValueError:
-                    error.print(f"Please specify int or float to '{args}'s value")
+                    error.print(f"Please specify int or float to value of '{args}'")
             elif args == '-m' or args == '--multiprocess':
                 option.config('multiprocess', True)
             elif args == '--tor':
@@ -1320,7 +1325,7 @@ prop <options> URL [URL...]
                 print(history.root)
                 sys.exit()
             elif args == "-U" or args == "--upgrade":
-                subprocess.run(["pip", "install", "--upgrade", "git+https://github.com/mino-38/prop"])
+                subprocess.run(["pip", "install", "--no-cache-dir", "--upgrade", "https://github.com/mino-38/prop/archive/refs/heads/main.zip"])
                 sys.exit()
             else:
                 url.append(args)
