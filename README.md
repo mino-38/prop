@@ -3,7 +3,11 @@
 
 # インストール
 ```bash
+# gitコマンドがある人
 $ pip install git+https://github.com/mino-38/prop
+
+# gitコマンドがない人
+$ pip install https://github.com/mino-38/prop/archive/refs/heads/main.zip
 ```
 
 # 基本的な使い方
@@ -26,7 +30,7 @@ UserAgentの値を偽装します
 
 ## -U, --upgrade
 propをアップデートします  
-これはpip install --upgrade git+https://github.com/mino-38/prop を実行しているだけなので、こちらを直接実行しても構いません
+これはpip install --no-cache-dir --upgrade https://github.com/mino-38/prop/archive/refs/heads/main.zip を実行しているだけなので、こちらを直接実行しても構いません
 
 ## -s, --search-words [検索ワード]
 指定されたURLのhtmlコードから検索することができます  
