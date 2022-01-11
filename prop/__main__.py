@@ -316,7 +316,8 @@ class parser:
         else:
             downloaded: set = set()
         if self.option['body'] and not self.option['check_only'] and not (self.option['no_downloaded'] and response.url.rstrip('/') in downloaded):
-            WebSiteData: dict = {response.url: self.dl.recursive_download(response.url, response.text)}
+            root = self.dl.recursive_download(response.url, response.text)
+            WebSiteData: dict = {response.url: root, './': root}
             h.write(response.url.rstrip('/'))
         elif self.option['check_only']:
             WebSiteData: dict = {response.url: response.url}
