@@ -301,6 +301,9 @@ class parser:
                 break
         return data
 
+    def _convert_src(self, source: bytes):
+        return source.decode().replace('data-lazy-src=', 'src=').replace('data-src=', 'src=').encode()
+
     def spider(self, response, *, h=sys.stdout, session) -> Tuple[dict, list]:
         """
         HTMLからaタグとimgタグの参照先を抽出し保存
@@ -344,7 +347,7 @@ class parser:
         print(f"histories are saved in '{h.history_file}'", file=sys.stderr)
         for n in range(self.option['recursive']):
             for source, cwd_url in zip(source, cwd_urls):
-                datas = bs(source, self.parser)
+                datas = bs(self._convert_src(source), self.parser)
                 if self.option['body']:
                     a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) #aタグ抽出
                     link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, WebSiteData, downloaded, is_ok, cut=False) # rel=stylesheetのlinkタグを抽出
@@ -356,7 +359,7 @@ class parser:
                         os.mkdir('styles')
                         self.log(20, 'loading stylesheets...')
                         if self.option['progress']:
-                            link_info = tqdm(link_data.items())
+                            link_info = tqdm(link_data.items(), leave=False, desc="'stylesheets'")
                         else:
                             link_info = link_data.items()
                         before_fmt = self.dl.option['formated']
@@ -385,7 +388,7 @@ class parser:
                         with open(info_file, 'r') as f:
                             WebSiteData.update(json.load(f))
                     if self.option['progress']:
-                        a_info = tqdm(a_data.items())
+                        a_info = tqdm(a_data.items(), leave=False, desc="'a tag'")
                     else:
                         a_info = a_data.items()
                     for from_url, target_url in a_info:
@@ -419,7 +422,7 @@ class parser:
                         sleep(round(uniform(self.option['interval'], max), 1))
                 if self.option['content']:
                     if self.option['progress']:
-                        img_info = tqdm(img_data.items())
+                        img_info = tqdm(img_data.items(), leave=False, desc="'img tag'")
                     else:
                         img_info = img_data.items()
                     for from_url, target_url in img_info:
