@@ -324,8 +324,6 @@ class parser:
             WebSiteData: dict = dict()
         root_url: str = self.get_rootdir(response.url)
         # ↑ホームURLを取得
-        # parser.get_rootdir('http://example.com/1/index.html')
-        # >>> http://example.com
         cwd_urls: List[str] = [response.url]
         # ↑リクエストしたURLを取得
         # aタグの参照先に./~~が出てきたときにこの変数の値と連結させる
