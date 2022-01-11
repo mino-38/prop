@@ -260,11 +260,11 @@ class parser:
             url: str = self.delete_query(tag.get(get)) # 参照先抽出
             if not url:
                 continue
-            if not self.is_url(url):
-                target_url: str = urljoin(cwd_url, url)
-            else:
-                target_url = url
+            if self.is_url(url):
+                target_url: str = url
                 dns = True
+            else:
+                target_url: str = urljoin(cwd_url, url)
             if cut and not start:
                 if target_url.endswith(self.option['start']):
                     start = True
@@ -297,7 +297,7 @@ class parser:
                     dns = False
                     did_host.add(hostname)
             data[url] = self.delete_query(target_url)
-            if cut and self.option['limit'] <= len(data):
+            if cut and 0 < self.option['limit'] <= len(data):
                 break
         return data
 
@@ -345,10 +345,10 @@ class parser:
             for source, cwd_url in zip(source, cwd_urls):
                 datas = bs(source, self.parser)
                 if self.option['body']:
-                    a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, WebSiteData, downloaded, is_ok, bool(self.option['limit'])) #aタグ抽出
-                    link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, WebSiteData, downloaded, is_ok, False) # rel=stylesheetのlinkタグを抽出
+                    a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) #aタグ抽出
+                    link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, WebSiteData, downloaded, is_ok, cut=False) # rel=stylesheetのlinkタグを抽出
                 if self.option['content']:
-                    img_data: dict = self._cut(datas.find_all('img'), 'src', cwd_url, response, root_url, WebSiteData, downloaded, is_ok, bool(self.option['limit'])) # imgタグ抽出
+                    img_data: dict = self._cut(datas.find_all('img'), 'src', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) # imgタグ抽出
                 self.option['header']['Referer'] = cwd_url
                 if self.option['body']:
                     if not os.path.isfile(info_file) and not self.option['check_only']:
