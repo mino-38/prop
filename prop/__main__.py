@@ -257,7 +257,16 @@ class parser:
         dns = False
         start = self.option['start'] is None
         for tag in list:
-            url: str = self.delete_query(tag.get(get)) # 参照先抽出
+            if isinstance(get, str):
+                url: str = self.delete_query(tag.get(get))
+            else:
+                for g in get:
+                    url = tag.get(g)
+                    if url:
+                        break
+                else:
+                    continue
+                url = self.delete_query(url)
             if not url:
                 continue
             if self.is_url(url):
@@ -300,9 +309,6 @@ class parser:
             if cut and 0 < self.option['limit'] <= len(data):
                 break
         return data
-
-    def _convert_src(self, source: bytes):
-        return source.decode().replace('data-lazy-src=', 'src=').replace('data-src=', 'src=').encode()
 
     def spider(self, response, *, h=sys.stdout, session) -> Tuple[dict, list]:
         """
@@ -347,12 +353,12 @@ class parser:
         print(f"histories are saved in '{h.history_file}'", file=sys.stderr)
         for n in range(self.option['recursive']):
             for source, cwd_url in zip(source, cwd_urls):
-                datas = bs(self._convert_src(source), self.parser)
+                datas = bs(source, self.parser)
                 if self.option['body']:
                     a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) #aタグ抽出
                     link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, WebSiteData, downloaded, is_ok, cut=False) # rel=stylesheetのlinkタグを抽出
                 if self.option['content']:
-                    img_data: dict = self._cut(datas.find_all('img'), 'src', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) # imgタグ抽出
+                    img_data: dict = self._cut(datas.find_all('img'), ['src', 'data-lazy-src', 'data-src'], cwd_url, response, root_url, WebSiteData, downloaded, is_ok) # imgタグ抽出
                 self.option['header']['Referer'] = cwd_url
                 if self.option['body']:
                     if not os.path.isfile(info_file) and not self.option['check_only']:
