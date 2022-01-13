@@ -271,12 +271,11 @@ class parser:
                 continue
             if self.is_url(url):
                 target_url: str = url
-                if self.is_url(target_url):
-                    dns = True
-                else:
-                    continue
+                dns = True
             else:
                 target_url: str = urljoin(cwd_url, url)
+                if not self.is_url(target_url):
+                    continue
             if cut and not start:
                 if target_url.endswith(self.option['start']):
                     start = True
@@ -658,7 +657,7 @@ request urls: {0}
         """
         ファイルパス変換をスタートする
         """
-        if self.option['conversion']:
+        if self.option['conversion'] and self.option['body']:
             self.log(20, 'converting... ')
             self.local_path_conversion(info)
             self.log(20, 'converting... '+'\033[32m' + 'done' + '\033[0m')
