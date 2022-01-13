@@ -205,8 +205,8 @@ class parser:
         if not isinstance(url, str):
             return url
         split = url.split('.')
-        if '/' in split[-1]:
-            return (url, '')
+        if '/' in split[-1] or urlparse(url).path in {'', '/'}:
+            return (url, '.html')
         else:
             return ('.'.join(split[:-1]), '.'+split[-1])
 
@@ -382,8 +382,7 @@ class parser:
                                     if self.option['debug']:
                                         self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                     res.close()
-                                    count += 1
-                                    result = self.dl.recursive_download(res.url, res.text, count)
+                                    result = self.dl.recursive_download(res.url, res.text)
                                     WebSiteData[from_url] = result
                                     break
                                 except Exception as e:
@@ -604,7 +603,7 @@ request urls: {0}
             if self.option['filename'] is not os.path.basename:
                 save_name: str = self.option['filename']
                 if os.path.isdir(self.option['filename']):
-                    save_name: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url)+(self.parse.splitext(r.url)[1] or '.html'))
+                    save_name: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url)+(self.parse.splitext(r.url)[1]))
                 if isinstance(res, str):
                     mode = 'w'
                 with open(save_name, mode) as f:
@@ -666,9 +665,13 @@ request urls: {0}
         """
         HTMLから見つかったファイルをダウンロード
         """
-        file: Tuple[str] = self.parse.splitext(url.rstrip('/'))
+        exts: Tuple[str] = self.parse.splitext(url.rstrip('/'))
         # フォーマットを元に保存ファイル名を決める
-        save_filename: str = self.option['formated'].replace('%(file)s', self.parse.get_filename(file[0])).replace('%(num)d', str(number))+(file[1] or '.html')
+        save_filename: str = self.option['formated'].replace('%(file)s', self.parse.get_filename(exts[0])).replace('%(num)d', str(number))
+        if '%(ext)s' in save_filename:
+            save_filename = save_filename.replace('%(ext)s', exts[1].lstrip('.'))
+        else:
+            save_filename += exts[1]
         if os.path.isfile(save_filename) and not self.ask_continue(f'{save_filename} has already existed\nCan I overwrite?'):
             return save_filename
         while True:
@@ -823,7 +826,7 @@ Do not show progress
 -d, --data param1=value1 param2=value2 ...
 Specify the data and parameters to send
 Specify as follows
-prop -d q = "hogehoge" hl = "fugafuga" URL
+prop -d q=hogehoge hl=fugafuga URL
 Please specify the -j option when sending in json format
 
 -j, --json
@@ -935,22 +938,29 @@ External address sites are also downloaded
 -f, --format [format]
 You can specify the format of the file save name at the time of recursive download
 (If %(file)s is not included in the character string, it will not be reflected. Also, extension is given automatically)
-(* Suppose there are text links http://example.com/2 and http://example.com/3 in http://example.com)
+(Ex: Suppose there are text links https://example.com/2.html and https://example.com/3.html in https://example.com)
 
-prop -r -f "%(num)d-%(root)s-%(file)s" http://example.com
+prop -r -f "%(num)d-%(root)s-%(file)s" https://example.com
 
->>> http://example.com saved as 0-example.com, http://example.com/2 saved as 1-example.com-2.html, http://example.com/3 saved as 2-example.com-3.html
+>>> https://example.com saved as 0-example.com, http://example.com/2 saved as 1-example.com-2.html, http://example.com/3 saved as 2-example.com-3.html
+
+prop -r -f "%(num)d.%(ext)s" https://www.example.com
+
+>>> https://example.com saved as 0.html, https://example.com/2.html saved as 1.html, https://example.com/3.html saved as 2.html
 
 Specifiable format
 
-%(root)s
-Hostname
+- %(root)s
+  Hostname
 
-%(file)s
-Web page file name (character string after the last / (slash) in the URL of the site)
+- %(file)s
+  Web page file name (character string after the last '/'  in the URL of the site)
 
-%(num)d
-Consecutive numbers
+- %(ext)s
+  File extension (not including '.')
+
+- %(num)d
+  Consecutive numbers
 
 -I, --interval [seconds]
 Specifies the interval for recursive downloads
@@ -1291,7 +1301,7 @@ prop <options> URL [URL...]
                     string: str = arg[n+1]
                 except IndexError:
                     error.print(f"{args} [format]\nPlease specify value of '{args}'")
-                if '%(file)s' in string:
+                if '%(file)s' in string or '%(num)d' in string:
                     option.config('format', string)
                 skip += 1
             elif args == '-F' or args == '--information':
