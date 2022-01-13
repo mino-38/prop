@@ -271,7 +271,10 @@ class parser:
                 continue
             if self.is_url(url):
                 target_url: str = url
-                dns = True
+                if self.is_url(target_url):
+                    dns = True
+                else:
+                    continue
             else:
                 target_url: str = urljoin(cwd_url, url)
             if cut and not start:
@@ -620,7 +623,7 @@ request urls: {0}
         if self.option['output']:
             return [r, output_data]
 
-    def _stdout(self, response, output=' ') -> None:
+    def _stdout(self, response, output='') -> None:
         if isinstance(response, str):
             tqdm.write(response)
         elif self.option['info'] and response:
