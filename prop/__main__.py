@@ -14,7 +14,7 @@ from socket import gaierror
 from time import sleep
 from typing import Any, Dict, List, Tuple
 from urllib.error import URLError
-from urllib.parse import urldefrag, urljoin, urlparse
+from urllib.parse import unquote, urldefrag, urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup as bs
@@ -195,11 +195,11 @@ class parser:
     def get_filename(self, url, name_only=True):
         if not isinstance(url, str):
             return url
-        result = url.rstrip('/').split('/')
+        result = unquote(url.rstrip('/').split('/')[-1])
         if name_only:
-            defrag = urldefrag(result[-1]).url
+            defrag = urldefrag(result).url
             return self.delete_query(defrag)
-        return result[-1]
+        return result
 
     def splitext(self, url):
         if not isinstance(url, str):
@@ -620,10 +620,9 @@ request urls: {0}
         if self.option['output']:
             return [r, output_data]
 
-    def _stdout(self, response, output='') -> None:
+    def _stdout(self, response, output=' ') -> None:
         if isinstance(response, str):
             tqdm.write(response)
-            return
         elif self.option['info'] and response:
             tqdm.write('\n\033[35m[histories of redirect]\033[0m\n')
             if not response.history:
@@ -641,8 +640,8 @@ request urls: {0}
                     tqdm.write(f'\033[34m{c.name}\033[0m: {c.value}')
             tqdm.write('\n\033[35m[response headers]\033[0m\n')
         for i in output:
-            if isinstance(i, str):
-                tqdm.write(i, end='')
+            if isinstance(i, (str, bytes)):
+                tqdm.write(str(i), end='')
             else:
                 for k, v  in i.items():
                     tqdm.write(f'\033[34m{k}\033[0m: {v}')
@@ -1376,8 +1375,8 @@ def start(dl):
             dl.log(40, f"Timed out while downloading '{url}'")
         except error.ConnectError as e:
             dl.log(40, e)
-        except Exception as e:
-            dl.log(40, e)
+        #except Exception as e:
+            #dl.log(40, e)
     else:
         try:
             dl.start()
