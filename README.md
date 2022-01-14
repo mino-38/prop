@@ -102,13 +102,18 @@ $ prop -R instruct.txt
 |  %(root)s  |  ダウンロード元のホスト名  |
 |  %(file)s  |  ダウンロード元のファイル名  |
 |  %(num)d  |  0から始まる連番  |
+|  %(ext)s  |  拡張子  |
 
 
 Ex:
 ```bash
-$ prop -r -f %(num)dtest-%(file)s -o store_ directory URL
+$ prop -r -f "%(num)dtest-%(file)s" -o store_ directory URL
 
 -> store_directory/0test-[filename], store_directory/1test-[filename] ...という名前でダウンロード
+
+$ prop -r -f "test-%(num)d.%(ext)s" -o store_ directory URL
+
+-> store_directory/test-0.[ext], store_directory/test-1[ext] ...という名前でダウンロード
 ```
 
 ## ダウンロード対象を制限(拡張)するオプション
@@ -150,7 +155,6 @@ $ rm -r $(prop --history-directory)
 
 # 追加予定の機能
 - 今のところ不便なく使えてるので無し
-- だけど引数解析部分のエラーキャッチが甘いと思ってるので直したい
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
