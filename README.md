@@ -116,6 +116,8 @@ $ prop -r -f "test-%(num)d.%(ext)s" -o store_ directory URL
 -> store_directory/test-0.[ext], store_directory/test-1[ext] ...という名前でダウンロード
 ```
 
+※フォーマットに%(num)d、または%(file)sが含まれていない場合、反映されないので注意して下さい(保存名が動的に変化しないため)
+
 ## ダウンロード対象を制限(拡張)するオプション
 |  短縮オプション名  |  長いオプション名  |  処理  |
 |  ----  |  ----  |  ----  |
