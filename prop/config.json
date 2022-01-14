@@ -27,6 +27,5 @@
     "ssl": true,
     "parser": "html.parser",
     "no_dl_external": true,
-    "torpath": null,
     "save_robots": true
 }

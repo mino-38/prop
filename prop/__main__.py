@@ -5,6 +5,7 @@ import math
 import os
 import platform
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -126,6 +127,32 @@ class setting:
         with open(setting.log_file, 'w') as f:
             f.write('')
 
+class cache:
+    """
+    キャッシュ(stylesheet)を扱うクラス
+    """
+    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
+    def __init__(self, url, parse):
+        self.parse = parse
+        host = self.parse.get_hostname(url) 
+        if not os.path.isdir(self.root):
+            os.mkdir(self.root)
+        self.directory = os.path.join(cache.root, host)
+        if not os.path.isdir(self.directory):
+            os.mkdir(self.directory)
+
+    def get_cache(self, path) -> str or None:
+        file = os.path.join(self.directory, self.parse.get_filename(path))
+        if os.path.isfile(file):
+            return file
+        else:
+            return None
+
+    def save(self, url, body: str) -> str:
+        file = os.path.join(self.directory, self.parse.get_filename(url))
+        with open(file, 'w') as f:
+            f.write(body)
+
 class history:
     """
     ダウンロード履歴関連の関数を定義するクラス
@@ -204,8 +231,8 @@ class parser:
     def splitext(self, url):
         if not isinstance(url, str):
             return url
-        split = url.split('.')
-        if '/' in split[-1] or urlparse(url).path in {'', '/'}:
+        split = url.rstrip('/').split('.')
+        if len(split) < 2 or not split[-1] or '/' in split[-1] or urlparse(url).path in {'', '/'}:
             return (url, '.html')
         else:
             return ('.'.join(split[:-1]), '.'+split[-1])
@@ -281,7 +308,7 @@ class parser:
                     start = True
                 else:
                     continue
-            if cut and ((self.option['noparent'] and (not target_url.startswith(response.url) and target_url.startswith(root_url))) or url in set(WebSiteData.keys()) or ((target_url.startswith(cwd_url) and  '#' in target_url) or (self.option['no_dl_external'] and not target_url.startswith(root_url)))):
+            if cut and ((self.option['noparent'] and (not target_url.startswith(response.url) and target_url.startswith(root_url))) or target_url in set(WebSiteData) or ((target_url.startswith(cwd_url) and  '#' in target_url) or (self.option['no_dl_external'] and not target_url.startswith(root_url)))):
                 continue
             if cut and (self.option['no_downloaded'] and target_url in downloaded):
                 continue
@@ -363,7 +390,7 @@ class parser:
                     img_data: dict = self._cut(datas.find_all('img'), ['src', 'data-lazy-src', 'data-src'], cwd_url, response, root_url, WebSiteData, downloaded, is_ok) # imgタグ抽出
                 self.option['header']['Referer'] = cwd_url
                 if self.option['body']:
-                    if not os.path.isfile(info_file) and not self.option['check_only']:
+                    if not os.path.isdir('styles') and not self.option['check_only']:
                         os.mkdir('styles')
                         self.log(20, 'loading stylesheets...')
                         if self.option['progress']:
@@ -373,23 +400,30 @@ class parser:
                         before_fmt = self.dl.option['formated']
                         self.dl.option['formated'] = os.path.join('styles', '%(file)s')
                         for from_url, target_url in link_info:
-                            for i in range(self.option['reconnect']+1):
-                                try:
-                                    res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
-                                    h.write(res.url)
-                                    if not self.is_success_status(res.status_code):
+                            caches = cache(target_url, self)
+                            che = caches.get_cache(target_url)
+                            if che:
+                                shutil.copy(che, os.path.join('styles', os.path.basename(che)))
+                                self.log(20, f'Use cache instead of downloading "{target_url}"')
+                                result = che
+                            else:
+                                for i in range(self.option['reconnect']+1):
+                                    try:
+                                        res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
+                                        if not self.is_success_status(res.status_code):
+                                            break
+                                        if self.option['debug']:
+                                            self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
+                                        res.close()
+                                        result = self.dl.recursive_download(res.url, res.text)
+                                        caches.save(target_url, res.text)
                                         break
-                                    if self.option['debug']:
-                                        self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
-                                    res.close()
-                                    result = self.dl.recursive_download(res.url, res.text)
-                                    WebSiteData[from_url] = result
-                                    break
-                                except Exception as e:
-                                    if i >= self.option['reconnect']-1:
-                                        self.log(30, e)
-                                    sleep(1)
-                                    continue
+                                    except Exception as e:
+                                        if i >= self.option['reconnect']-1:
+                                            self.log(30, e)
+                                        sleep(1)
+                                        continue
+                            WebSiteData[from_url] = result
                         self.dl.option['formated'] = before_fmt
                     elif not self.option['check_only']:
                         with open(info_file, 'r') as f:
@@ -665,13 +699,9 @@ request urls: {0}
         """
         HTMLから見つかったファイルをダウンロード
         """
-        exts: Tuple[str] = self.parse.splitext(url.rstrip('/'))
+        exts: Tuple[str, str] = self.parse.splitext(url)
         # フォーマットを元に保存ファイル名を決める
-        save_filename: str = self.option['formated'].replace('%(file)s', self.parse.get_filename(exts[0])).replace('%(num)d', str(number))
-        if '%(ext)s' in save_filename:
-            save_filename = save_filename.replace('%(ext)s', exts[1].lstrip('.'))
-        else:
-            save_filename += exts[1]
+        save_filename: str = self.option['formated'].replace('%(file)s', ''.join(self.parse.splitext(self.parse.get_filename(url)))).replace('%(num)d', str(number)).replace('%(ext)s', exts[1].lstrip('.'))
         if os.path.isfile(save_filename) and not self.ask_continue(f'{save_filename} has already existed\nCan I overwrite?'):
             return save_filename
         while True:
@@ -973,7 +1003,7 @@ Recommended to specify
 
 -nd, --no-downloaded
 URLs that have already been downloaded will not be downloaded
-This option does not work properly if you delete the files under the ./data/ directory (even if you delete it, it will be newly generated when you download it again).
+This option does not work properly if you delete the files under the {history_directory} directory (even if you delete it, it will be newly generated when you download it again).
 
 -----The following special options-----
 
@@ -993,13 +1023,16 @@ Show the file which logs are written
 --history-directory
 Show the directory which files which histories are written are stored
 
+--cache-directory
+Show the directory which caches(stylesheet) were stored
+
 -U, --upgrade
-Update the prop.
+Update the prop
 
 -p, --parse
 Get HTML from standard input and parse it
-You can use the -s option to specify the search tag, class, and id.
-If you specify a URL when you specify this option, an error will occur.
+You can use the -s option to specify the search tag, class, and id
+If you specify a URL when you specify this option, an error will occur
 
 [About parser and default settings]
 
@@ -1051,7 +1084,7 @@ The options that can be changed are as follows
     "no_dl_external": true,
     "save_robots": true // this recommended to specify true
 }
-""".replace("{config_file}", setting.config_file).replace("{log_file}", setting.log_file))
+""".replace("{config_file}", setting.config_file).replace("{log_file}", setting.log_file).replace('{history_directory}', history.root))
 
 def conversion_arg(args: List[str]) -> list:
     result: list = []
@@ -1342,6 +1375,9 @@ prop <options> URL [URL...]
                 sys.exit()
             elif args == "--history-directory":
                 print(history.root)
+                sys.exit()
+            elif args == "--cache-directory":
+                print(cache.root)
                 sys.exit()
             elif args == "-U" or args == "--upgrade":
                 subprocess.run(["pip", "install", "--no-cache-dir", "--upgrade", "https://github.com/mino-38/prop/archive/refs/heads/main.zip"])
