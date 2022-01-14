@@ -1348,7 +1348,7 @@ prop <options> URL [URL...]
                 if '%(file)s' in string or '%(num)d' in string:
                     option.config('format', string)
                 else:
-                    option.log(30, 'Format specified by you isn\'t applied because "%(file)s" or "%(num)d" aren\'t in it")
+                    option.log(30, 'Format specified by you isn\'t applied because "%(file)s" or "%(num)d" aren\'t in it')
                 skip += 1
             elif args == '-F' or args == '--information':
                 option.config('info', True)
