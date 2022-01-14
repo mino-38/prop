@@ -835,7 +835,7 @@ Output of bytes string
 -t, --timeout [timeout time (number)]
 Set the timeout time
 Please specify number
-Also, the -i option takes precedence over this option.
+Also, the -i option takes precedence over this option
 
 -x, --method [method]
 Communicate by specifying the communication method
@@ -853,7 +853,7 @@ Ignore SSL certificate validation
 -n, --no-progress
 Do not show progress
 
--d, --data param1=value1 param2=value2 ...
+-d, --data param1=value1 param2=value2 
 Specify the data and parameters to send
 Specify as follows
 prop -d q=hogehoge hl=fugafuga URL
@@ -862,12 +862,12 @@ Please specify the -j option when sending in json format
 -j, --json
 Send data in json format
 
--H, --header HeaderName1=HeaderInformation1 HeaderName2=HeaderInformation2 ...
+-H, --header HeaderName1=HeaderInformation1 HeaderName2=HeaderInformation2 
 Communicate by specifying the header
 
 -a, --fake-user-agent [BrowserName]
 It use the automatically generated User-Agent
-In addition, it is also possible to specify the name of the browser to automatically generate the User-Agent.
+In addition, it is also possible to specify the name of the browser to automatically generate the User-Agent
 
 -c, --cookie cookie name 1 = information 1 cookie name 2 = information 2
 Communicate by specifying the cookies
@@ -877,7 +877,7 @@ Specify the proxy to use for communication
 
 --tor [port number (optional)]
 It use tor as a proxy
-If you omit the port number, 9050 will be used.
+If you omit the port number, 9050 will be used
 And, there are some things you need to do before using this option
 Windows:
 Just run tor.exe
@@ -892,7 +892,7 @@ $ sudo service tor start
 
 -F, --information
 Outputs only status code, redirect history, cookie information, response header information
-If you have specified this option and want to output to a file, use> (redirect) instead of the -o option.
+If you have specified this option and want to output to a file, use> (redirect) instead of the -o option
 
 -s, --search-words [words]
 Extracts and outputs the code such as the specified tag, class, id, etc. from the source code of the site
@@ -945,10 +945,10 @@ Display detailed information at the time of request
 
 -r, --recursive [Recursion count (optional)]
 Recursively download site text links
-When specifying this option, be sure to specify the output destination with the -o option (specify "directory" instead of file).
+When specifying this option, be sure to specify the output destination with the -o option (specify "directory" instead of file)
 Also, if you specify a directory that does not exist, a new one will be created.)
-If you do not specify the number of recursion, it will be executed as if 1 was specified.
-Also, if the -nE option is not specified, local path conversion will be performed automatically.
+If you do not specify the number of recursion, it will be executed as if 1 was specified
+Also, if the -nE option is not specified, local path conversion will be performed automatically
 
 -nc, --no-content
 It don't download images
@@ -997,13 +997,13 @@ Specifies the interval for recursive downloads
 The default is 1 second
 
 -m, --multiprocess
-It use multi-thread processing when converting the URL reference destination of the downloaded.
-What you do with multithreading The processing time is greatly reduced.
+It use multi-thread processing when converting the URL reference destination of the downloaded
+What you do with multithreading The processing time is greatly reduced
 Recommended to specify
 
 -nd, --no-downloaded
 URLs that have already been downloaded will not be downloaded
-This option does not work properly if you delete the files under the {history_directory} directory (even if you delete it, it will be newly generated when you download it again).
+This option does not work properly if you delete the files under the {history_directory} directory (even if you delete it, it will be newly generated when you download it again)
 
 -----The following special options-----
 
