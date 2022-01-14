@@ -978,8 +978,9 @@ External address sites are also downloaded
 
 -f, --format [format]
 You can specify the format of the file save name at the time of recursive download
-(If %(file)s is not included in the character string, it will not be reflected. Also, extension is given automatically)
-(Ex: Suppose there are text links https://example.com/2.html and https://example.com/3.html in https://example.com)
+If "%(file)s" or "%(num)d" aren't included in the character string, it won't be applied because saved name aren't changed for each file
+
+Ex: Suppose there are text links https://example.com/2.html and https://example.com/3.html in https://example.com
 
 prop -r -f "%(num)d-%(root)s-%(file)s" https://example.com
 
@@ -996,6 +997,7 @@ Specifiable format
 
 - %(file)s
   Web page file name (character string after the last '/'  in the URL of the site)
+  And, this is automatically given an extension
 
 - %(ext)s
   File extension (not including '.')
