@@ -294,7 +294,7 @@ class parser:
                 else:
                     continue
                 url = self.delete_query(url)
-            if not url:
+            if not url or '#' in url:
                 continue
             if self.is_url(url):
                 target_url: str = url
@@ -339,6 +339,14 @@ class parser:
                 break
         return data
 
+    def _get_count(self):
+        files = list(filter(lambda p: bool(re.match(self.option['formated'].replace('%(num)d', r'\d+').replace('%(file)s', '.*').replace('%(ext)s', '.*'), p)), os.listdir()))
+        if files:
+            r = re.search(r'\d+', max(files))
+            if r:
+                return int(r.group())+1
+        return 0
+
     def spider(self, response, *, h=sys.stdout, session) -> Tuple[dict, list]:
         """
         HTMLからaタグとimgタグの参照先を抽出し保存
@@ -346,7 +354,10 @@ class parser:
         temporary_list: list = []
         temporary_list_urls: list = []
         saved_images_file_list: list = []
-        count = 0
+        if '%(num)d' in self.option['formated']:
+            count = self._get_count()
+        else:
+            count = 0
         max = self.option['interval']+3
         info_file = os.path.join('styles', '.prop_info.json')
         if self.option['no_downloaded']:
@@ -403,9 +414,9 @@ class parser:
                             caches = cache(target_url, self)
                             che = caches.get_cache(target_url)
                             if che:
-                                shutil.copy(che, os.path.join('styles', os.path.basename(che)))
-                                self.log(20, f'Use cache instead of downloading "{target_url}"')
-                                result = che
+                                result = os.path.join('styles', os.path.basename(che))
+                                shutil.copy(che, result)
+                                self.log(20, f'Use cache instead of downloading "{target_url}"') 
                             else:
                                 for i in range(self.option['reconnect']+1):
                                     try:
