@@ -978,7 +978,7 @@ External address sites are also downloaded
 
 -f, --format [format]
 You can specify the format of the file save name at the time of recursive download
-If "%(file)s" or "%(num)d" aren't included in the character string, it won't be applied because saved name aren't changed for each file
+If "%(file)s" or "%(num)d" aren't included in the character string, it won't be applied because saved name isn't changed for each file
 
 Ex: Suppose there are text links https://example.com/2.html and https://example.com/3.html in https://example.com
 
@@ -1350,7 +1350,7 @@ prop <options> URL [URL...]
                 if '%(file)s' in string or '%(num)d' in string:
                     option.config('format', string)
                 else:
-                    option.log(30, 'Format specified by you isn\'t applied because "%(file)s" or "%(num)d" aren\'t in it\nIf you want to know why it isn\'t applied without "%(file)s" or "%(num)d", please see help message for more information')
+                    option.log(30, '\033[33mFormat specified by you isn\'t applied because "%(file)s" or "%(num)d" aren\'t in it\nIf you want to know why it isn\'t applied without "%(file)s" or "%(num)d", please see help message for more information\033[0m')
                 skip += 1
             elif args == '-F' or args == '--information':
                 option.config('info', True)
