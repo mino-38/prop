@@ -1288,10 +1288,10 @@ prop <options> URL [URL...]
                 for n, a in enumerate(instruct):
                     del sys.argv[1:]
                     sys.argv.extend(_argsplit(a))
-                    url, option, log = argument()
+                    url, log, option = argument()
                     urls.append(url)
                     options.append(option)
-                return urls, options, log
+                return urls, log, options
             elif args == '-B' or args == '--basic-auth':
                 try:
                     user: str = arg[n+1]
@@ -1438,8 +1438,8 @@ def start(dl):
             dl.log(40, f"Timed out while downloading '{url}'")
         except error.ConnectError as e:
             dl.log(40, e)
-        #except Exception as e:
-            #dl.log(40, e)
+        except Exception as e:
+            dl.log(40, e)
     else:
         try:
             dl.start()
