@@ -278,7 +278,7 @@ class parser:
             self.log(30, f"it changed interval because it was shorter than the time stated in robots.txt  '{self.option['interval']}' => '{delay}'")
             self.option['interval'] = delay
 
-    def _cut(self, list, get, cwd_url, response, root_url, WebSiteData, downloaded, is_ok, cut=True):
+    def _cut(self, list, get, cwd_url, response, root_url, downloaded, is_ok, cut=True):
         data: dict = dict()
         did_host: set = set()
         dns = False
@@ -297,10 +297,10 @@ class parser:
             if not url or '#' in url:
                 continue
             if self.is_url(url):
-                target_url: str = url
+                target_url: str = self.delete_query(url)
                 dns = True
             else:
-                target_url: str = urljoin(cwd_url, url)
+                target_url: str = self.delete_query(urljoin(cwd_url, url))
                 if not self.is_url(target_url):
                     continue
             if cut and not start:
@@ -308,7 +308,7 @@ class parser:
                     start = True
                 else:
                     continue
-            if cut and ((self.option['noparent'] and (not target_url.startswith(response.url) and target_url.startswith(root_url))) or target_url in set(WebSiteData) or ((target_url.startswith(cwd_url) and  '#' in target_url) or (self.option['no_dl_external'] and not target_url.startswith(root_url)))):
+            if cut and ((self.option['noparent'] and (not target_url.startswith(response.url) and target_url.startswith(root_url))) or target_url in set(data.values()) or ((target_url.startswith(cwd_url) and  '#' in target_url) or (self.option['no_dl_external'] and not target_url.startswith(root_url)))):
                 continue
             if cut and (self.option['no_downloaded'] and target_url in downloaded):
                 continue
@@ -334,7 +334,7 @@ class parser:
                 finally:
                     dns = False
                     did_host.add(hostname)
-            data[url] = self.delete_query(target_url)
+            data[url] = target_url
             if cut and 0 < self.option['limit'] <= len(data):
                 break
         return data
@@ -364,7 +364,7 @@ class parser:
             downloaded: set = h.read()
         else:
             downloaded: set = set()
-        if self.option['body'] and not self.option['check_only'] and not (self.option['no_downloaded'] and response.url.rstrip('/') in downloaded):
+        if self.option['body'] and not self.option['start'] and not self.option['check_only'] and not (self.option['no_downloaded'] and response.url.rstrip('/') in downloaded):
             root = self.dl.recursive_download(response.url, response.text)
             WebSiteData: dict = {response.url: root}
             h.write(response.url.rstrip('/'))
@@ -395,10 +395,10 @@ class parser:
             for source, cwd_url in zip(source, cwd_urls):
                 datas = bs(source, self.parser)
                 if self.option['body']:
-                    a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) #aタグ抽出
-                    link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, WebSiteData, downloaded, is_ok, cut=False) # rel=stylesheetのlinkタグを抽出
+                    a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, downloaded, is_ok) #aタグ抽出
+                    link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, downloaded, is_ok, cut=False) # rel=stylesheetのlinkタグを抽出
                 if self.option['content']:
-                    img_data: dict = self._cut(datas.find_all('img'), ['src', 'data-lazy-src', 'data-src'], cwd_url, response, root_url, WebSiteData, downloaded, is_ok) # imgタグ抽出
+                    img_data: dict = self._cut(datas.find_all('img'), ['src', 'data-lazy-src', 'data-src'], cwd_url, response, root_url, downloaded, is_ok) # imgタグ抽出
                 self.option['header']['Referer'] = cwd_url
                 if self.option['body']:
                     if not os.path.isdir('styles') and not self.option['check_only']:
