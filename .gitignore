@@ -3,3 +3,4 @@ prop.egg-info/
 prop-log.log
 build/
 history/
+cache/

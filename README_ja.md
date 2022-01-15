@@ -3,7 +3,11 @@
 
 # インストール
 ```bash
+# gitコマンドがある人
 $ pip install git+https://github.com/mino-38/prop
+
+# gitコマンドがない人
+$ pip install https://github.com/mino-38/prop/archive/refs/heads/main.zip
 ```
 
 # 基本的な使い方
@@ -26,7 +30,7 @@ UserAgentの値を偽装します
 
 ## -U, --upgrade
 propをアップデートします  
-これはpip install --upgrade git+https://github.com/mino-38/prop を実行しているだけなので、こちらを直接実行しても構いません
+これはpip install --no-cache-dir --upgrade https://github.com/mino-38/prop/archive/refs/heads/main.zip を実行しているだけなので、こちらを直接実行しても構いません
 
 ## -s, --search-words [検索ワード]
 指定されたURLのhtmlコードから検索することができます  
@@ -98,16 +102,21 @@ $ prop -R instruct.txt
 |  %(root)s  |  ダウンロード元のホスト名  |
 |  %(file)s  |  ダウンロード元のファイル名  |
 |  %(num)d  |  0から始まる連番  |
+|  %(ext)s  |  拡張子  |
 
 
 Ex:
 ```bash
-$ prop -r -f %(num)dtest-%(file)s -o store_ directory URL
+$ prop -r -f "%(num)dtest-%(file)s" -o store_ directory URL
 
 -> store_directory/0test-[filename], store_directory/1test-[filename] ...という名前でダウンロード
+
+$ prop -r -f "test-%(num)d.%(ext)s" -o store_ directory URL
+
+-> store_directory/test-0.[ext], store_directory/test-1[ext] ...という名前でダウンロード
 ```
 
-※フォーマットに%(num)d、または%(file)sが含まれていない場合、反映されないので注意して下さい(ファイル名が動的に変化しないため)
+※フォーマットに%(num)d、または%(file)sが含まれていない場合、反映されないので注意して下さい(保存名が動的に変化しないため)
 
 ## ダウンロード対象を制限(拡張)するオプション
 |  短縮オプション名  |  長いオプション名  |  処理  |
@@ -146,9 +155,12 @@ $ prop --clear
 $ rm -r $(prop --history-directory)
 ```
 
-# 何故これを作ったのか
-wgetの再帰ダウンロードって確かファイル名のフォーマット決められなかったんですよ  
-なので作りました(せっかくなので機能をたくさん詰め合わせた)
+# 新機能
+- 特殊フォーマットに%(ext)s を追加
+
+- キャッシュ機能の実装(これにより同じサイトをクロールするときにstylesheetを何度もダウンロードしなくて済むようになりました)
+
+- その他バグの修正
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です

@@ -5,6 +5,7 @@ import math
 import os
 import platform
 import re
+import shutil
 import socket
 import subprocess
 import sys
@@ -14,7 +15,7 @@ from socket import gaierror
 from time import sleep
 from typing import Any, Dict, List, Tuple
 from urllib.error import URLError
-from urllib.parse import urldefrag, urljoin, urlparse
+from urllib.parse import unquote, urldefrag, urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup as bs
@@ -47,6 +48,12 @@ class error:
     class ConnectError(Exception):
         pass
 
+    @staticmethod
+    def print(msg):
+        print(f"\033[31m{msg}\033[0m", file=sys.stderr)
+        print("\n\033[33mIf you don't know how to use, please use '-h', '--help' options and you will see help message\033[0m", file=sys.stderr)
+        sys.exit(1)
+
 class LoggingHandler(logging.Handler):
     color = {'INFO': '\033[36mINFO\033[0m', 'WARNING': '\033[33mWARNING\033[0m', 'WARN': '\033[33mWARN\033[0m', 'ERROR': '\033[31mERROR\033[0m'}
     def __init__(self, level=logging.NOTSET):
@@ -68,8 +75,8 @@ class LoggingFileHandler(logging.Handler):
 
     def emit(self, record):
         try:
-            record.msg = re.sub('\033\\[[+-]?\d+m', '', str(record.msg))
-            record.levelname = re.sub('\033\\[[+-]?\d+m', '', record.levelname)
+            record.msg = re.sub('\033\\[[+-]?\\d+m', '', str(record.msg))
+            record.levelname = re.sub('\033\\[[+-]?\\d+m', '', record.levelname)
             msg = self.format(record)
             self.file.write(msg)
             self.file.write('\n')
@@ -87,7 +94,7 @@ class setting:
     def __init__(self):
         # 設定できるオプションたち
         # 他からimportしてもこの辞書を弄ることで色々できる
-        self.options: Dict[str, bool or str or None] = {'limit': 0, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'progress': True, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/0.1.0'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
+        self.options: Dict[str, bool or str or None] = {'limit': 0, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'progress': True, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/1.1.2'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
@@ -119,6 +126,32 @@ class setting:
     def clear(self) -> None:
         with open(setting.log_file, 'w') as f:
             f.write('')
+
+class cache:
+    """
+    キャッシュ(stylesheet)を扱うクラス
+    """
+    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
+    def __init__(self, url, parse):
+        self.parse = parse
+        host = self.parse.get_hostname(url) 
+        if not os.path.isdir(self.root):
+            os.mkdir(self.root)
+        self.directory = os.path.join(cache.root, host)
+        if not os.path.isdir(self.directory):
+            os.mkdir(self.directory)
+
+    def get_cache(self, path) -> str or None:
+        file = os.path.join(self.directory, self.parse.get_filename(path))
+        if os.path.isfile(file):
+            return file
+        else:
+            return None
+
+    def save(self, url, body: str) -> str:
+        file = os.path.join(self.directory, self.parse.get_filename(url))
+        with open(file, 'w') as f:
+            f.write(body)
 
 class history:
     """
@@ -189,18 +222,18 @@ class parser:
     def get_filename(self, url, name_only=True):
         if not isinstance(url, str):
             return url
-        result = url.rstrip('/').split('/')
+        result = unquote(url.rstrip('/').split('/')[-1])
         if name_only:
-            defrag = urldefrag(result[-1]).url
+            defrag = urldefrag(result).url
             return self.delete_query(defrag)
-        return result[-1]
+        return result
 
     def splitext(self, url):
         if not isinstance(url, str):
             return url
-        split = url.split('.')
-        if '/' in split[-1]:
-            return (url, '')
+        split = url.rstrip('/').split('.')
+        if len(split) < 2 or not split[-1] or '/' in split[-1] or urlparse(url).path in {'', '/'}:
+            return (url, '.html')
         else:
             return ('.'.join(split[:-1]), '.'+split[-1])
 
@@ -245,26 +278,37 @@ class parser:
             self.log(30, f"it changed interval because it was shorter than the time stated in robots.txt  '{self.option['interval']}' => '{delay}'")
             self.option['interval'] = delay
 
-    def _cut(self, list, get, cwd_url, response, root_url, WebSiteData, downloaded, is_ok, cut=True):
+    def _cut(self, list, get, cwd_url, response, root_url, downloaded, is_ok, cut=True):
         data: dict = dict()
         did_host: set = set()
         dns = False
         start = self.option['start'] is None
         for tag in list:
-            url: str = self.delete_query(tag.get(get)) # 参照先抽出
-            if not url:
-                continue
-            if not self.is_url(url):
-                target_url: str = urljoin(cwd_url, url)
+            if isinstance(get, str):
+                url: str = self.delete_query(tag.get(get))
             else:
-                target_url = url
+                for g in get:
+                    url = tag.get(g)
+                    if url:
+                        break
+                else:
+                    continue
+                url = self.delete_query(url)
+            if not url or '#' in url:
+                continue
+            if self.is_url(url):
+                target_url: str = self.delete_query(url)
                 dns = True
+            else:
+                target_url: str = self.delete_query(urljoin(cwd_url, url))
+                if not self.is_url(target_url):
+                    continue
             if cut and not start:
                 if target_url.endswith(self.option['start']):
                     start = True
                 else:
                     continue
-            if cut and ((self.option['noparent'] and (not target_url.startswith(response.url) and target_url.startswith(root_url))) or url in set(WebSiteData.keys()) or ((target_url.startswith(cwd_url) and  '#' in target_url) or (self.option['no_dl_external'] and not target_url.startswith(root_url)))):
+            if cut and ((self.option['noparent'] and (not target_url.startswith(response.url) and target_url.startswith(root_url))) or target_url in set(data.values()) or ((target_url.startswith(cwd_url) and  '#' in target_url) or (self.option['no_dl_external'] and not target_url.startswith(root_url)))):
                 continue
             if cut and (self.option['no_downloaded'] and target_url in downloaded):
                 continue
@@ -276,13 +320,12 @@ class parser:
             if dns:
                 try:
                     hostname = self.get_hostname(target_url)
-                    if hostname in did_host:
-                        continue
-                    if not hostname:
-                        raise gaierror()
-                    if self.option['debug']:
-                        self.log(20, f"it be querying the DNS server for '{hostname}' now...")
-                    i = self.query_dns(hostname)
+                    if not hostname in did_host:
+                        if not hostname:
+                            raise gaierror()
+                        if self.option['debug']:
+                            self.log(20, f"it be querying the DNS server for '{hostname}' now...")
+                        i = self.query_dns(hostname)
                 except gaierror:
                     self.log(30, f"it skiped {target_url} because there was no response from the DNS server")
                     continue
@@ -291,10 +334,18 @@ class parser:
                 finally:
                     dns = False
                     did_host.add(hostname)
-            data[url] = self.delete_query(target_url)
+            data[url] = target_url
             if cut and 0 < self.option['limit'] <= len(data):
                 break
         return data
+
+    def _get_count(self):
+        files = list(filter(lambda p: bool(re.match(self.option['formated'].replace('%(num)d', r'\d+').replace('%(file)s', '.*').replace('%(ext)s', '.*'), p)), os.listdir()))
+        if files:
+            r = re.search(r'\d+', max(files))
+            if r:
+                return int(r.group())+1
+        return 0
 
     def spider(self, response, *, h=sys.stdout, session) -> Tuple[dict, list]:
         """
@@ -303,15 +354,19 @@ class parser:
         temporary_list: list = []
         temporary_list_urls: list = []
         saved_images_file_list: list = []
-        count = 0
+        if '%(num)d' in self.option['formated']:
+            count = self._get_count()
+        else:
+            count = 0
         max = self.option['interval']+3
-        css_file = os.path.join('styles', 'prop_css_info.json')
+        info_file = os.path.join('styles', '.prop_info.json')
         if self.option['no_downloaded']:
             downloaded: set = h.read()
         else:
             downloaded: set = set()
-        if self.option['body'] and not self.option['check_only'] and not (self.option['no_downloaded'] and response.url.rstrip('/') in downloaded):
-            WebSiteData: dict = {response.url: self.dl.recursive_download(response.url, response.text)}
+        if self.option['body'] and not self.option['start'] and not self.option['check_only'] and not (self.option['no_downloaded'] and response.url.rstrip('/') in downloaded):
+            root = self.dl.recursive_download(response.url, response.text)
+            WebSiteData: dict = {response.url: root}
             h.write(response.url.rstrip('/'))
         elif self.option['check_only']:
             WebSiteData: dict = {response.url: response.url}
@@ -319,8 +374,6 @@ class parser:
             WebSiteData: dict = dict()
         root_url: str = self.get_rootdir(response.url)
         # ↑ホームURLを取得
-        # parser.get_rootdir('http://example.com/1/index.html')
-        # >>> http://example.com
         cwd_urls: List[str] = [response.url]
         # ↑リクエストしたURLを取得
         # aタグの参照先に./~~が出てきたときにこの変数の値と連結させる
@@ -337,52 +390,57 @@ class parser:
             if self.option['debug']:
                 self.log(20, 'robots.txt was none')
         source: List[bytes] = [response.content]
-        print(f'histories are saved in {h.history_file}', file=sys.stderr)
+        print(f"histories are saved in '{h.history_file}'", file=sys.stderr)
         for n in range(self.option['recursive']):
             for source, cwd_url in zip(source, cwd_urls):
                 datas = bs(source, self.parser)
                 if self.option['body']:
-                    a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) #aタグ抽出
-                    link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, WebSiteData, downloaded, is_ok, False) # rel=stylesheetのlinkタグを抽出
+                    a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, downloaded, is_ok) #aタグ抽出
+                    link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, downloaded, is_ok, cut=False) # rel=stylesheetのlinkタグを抽出
                 if self.option['content']:
-                    img_data: dict = self._cut(datas.find_all('img'), 'src', cwd_url, response, root_url, WebSiteData, downloaded, is_ok) # imgタグ抽出
+                    img_data: dict = self._cut(datas.find_all('img'), ['src', 'data-lazy-src', 'data-src'], cwd_url, response, root_url, downloaded, is_ok) # imgタグ抽出
                 self.option['header']['Referer'] = cwd_url
                 if self.option['body']:
-                    if not os.path.isfile(css_file) and not self.option['check_only']:
+                    if not os.path.isdir('styles') and not self.option['check_only']:
                         os.mkdir('styles')
+                        self.log(20, 'loading stylesheets...')
                         if self.option['progress']:
-                            link_info = tqdm(link_data.items())
+                            link_info = tqdm(link_data.items(), leave=False, desc="'stylesheets'")
                         else:
                             link_info = link_data.items()
                         before_fmt = self.dl.option['formated']
-                        self.dl.option['formated'] = os.path.join('styles', self.dl.option['formated'])
+                        self.dl.option['formated'] = os.path.join('styles', '%(file)s')
                         for from_url, target_url in link_info:
-                            for i in range(self.option['reconnect']+1):
-                                try:
-                                    res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
-                                    h.write(res.url)
-                                    if not self.is_success_status(res.status_code):
+                            caches = cache(target_url, self)
+                            che = caches.get_cache(target_url)
+                            if che:
+                                result = os.path.join('styles', os.path.basename(che))
+                                shutil.copy(che, result)
+                                self.log(20, f'Use cache instead of downloading "{target_url}"') 
+                            else:
+                                for i in range(self.option['reconnect']+1):
+                                    try:
+                                        res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
+                                        if not self.is_success_status(res.status_code):
+                                            break
+                                        if self.option['debug']:
+                                            self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
+                                        res.close()
+                                        result = self.dl.recursive_download(res.url, res.text)
+                                        caches.save(target_url, res.text)
                                         break
-                                    if self.option['debug']:
-                                        self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
-                                    res.close()
-                                    count += 1
-                                    result = self.dl.recursive_download(res.url, res.text, count)
-                                    WebSiteData[from_url] = result
-                                    break
-                                except Exception as e:
-                                    if i >= self.option['reconnect']-1:
-                                        self.log(30, e)
-                                    sleep(1)
-                                    continue
-                        with open(css_file, 'w') as f:
-                            json.dump(WebSiteData, f, indent=4)
+                                    except Exception as e:
+                                        if i >= self.option['reconnect']-1:
+                                            self.log(30, e)
+                                        sleep(1)
+                                        continue
+                            WebSiteData[from_url] = result
                         self.dl.option['formated'] = before_fmt
                     elif not self.option['check_only']:
-                        with open(css_file, 'r') as f:
+                        with open(info_file, 'r') as f:
                             WebSiteData.update(json.load(f))
                     if self.option['progress']:
-                        a_info = tqdm(a_data.items())
+                        a_info = tqdm(a_data.items(), leave=False, desc="'a tag'")
                     else:
                         a_info = a_data.items()
                     for from_url, target_url in a_info:
@@ -416,7 +474,7 @@ class parser:
                         sleep(round(uniform(self.option['interval'], max), 1))
                 if self.option['content']:
                     if self.option['progress']:
-                        img_info = tqdm(img_data.items())
+                        img_info = tqdm(img_data.items(), leave=False, desc="'img tag'")
                     else:
                         img_info = img_data.items()
                     for from_url, target_url in img_info:
@@ -455,6 +513,10 @@ class parser:
             for k, v in WebSiteData.items():
                 print('{}  ... {}{}\033[0m'.format(k, '\033[32m' if v == 'Exists' else '\033[31m', v))
             sys.exit()
+        else:
+            if os.path.isdir('styles'):
+                with open(info_file, 'w') as f:
+                    json.dump(WebSiteData, f, indent=4, ensure_ascii=False)
         return WebSiteData, saved_images_file_list
 
 class downloader:
@@ -475,19 +537,20 @@ class downloader:
         """
         URLに対してリスエストを送る前準備と実行
         """
-        methods: dict = {'get': self.session.get, 'post': self.session.post, 'put': self.session.put, 'delete': self.session.delete, 'head': self.session.get, 'options': self.session.options}
+        methods: dict = {'get': self.session.get, 'post': self.session.post, 'put': self.session.put, 'delete': self.session.delete}
         instance: requests = methods.get(self.option['types'])
         if self.option['debug']:
             self.log(20, """
 request urls: {0}
 {1}
-            """.format(self.url, '\n'.join([f'{k}: {v}' for k, v in self.option.items()])))
+            """.format(self.url, '\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in self.option.items()])))
         if self.option['progress'] and not self.option['recursive']:
             for url in tqdm(self.url):
                 try:
                     hostname = self.parse.get_hostname(url)
                     if not hostname:
-                        raise error.ArgsError(f"It determined that '{url}' is not url")
+                        self.log(40, f"'{url}' is not url")
+                        continue
                     self.log(20, f"it be querying the DNS server for '{hostname}' now...")
                     i = self.parse.query_dns(hostname)
                     self.log(20, f"request start {url} [{i[0][-1][0]}]")
@@ -509,7 +572,11 @@ request urls: {0}
         else:
             for url in self.url:
                 try:
-                    i = self.parse.query_dns(url)
+                    hostname = self.parse.get_hostname(url)
+                    if not hostname:
+                        self.log(40, f"'{url}' is not url")
+                        continue
+                    i = self.parse.query_dns(hostname)
                     result = self.request(url, instance)
                 except gaierror:
                     continue
@@ -581,7 +648,7 @@ request urls: {0}
             if self.option['filename'] is not os.path.basename:
                 save_name: str = self.option['filename']
                 if os.path.isdir(self.option['filename']):
-                    save_name: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url)+(self.parse.splitext(r.url)[1] or '.html'))
+                    save_name: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url)+(self.parse.splitext(r.url)[1]))
                 if isinstance(res, str):
                     mode = 'w'
                 with open(save_name, mode) as f:
@@ -602,7 +669,6 @@ request urls: {0}
     def _stdout(self, response, output='') -> None:
         if isinstance(response, str):
             tqdm.write(response)
-            return
         elif self.option['info'] and response:
             tqdm.write('\n\033[35m[histories of redirect]\033[0m\n')
             if not response.history:
@@ -620,8 +686,8 @@ request urls: {0}
                     tqdm.write(f'\033[34m{c.name}\033[0m: {c.value}')
             tqdm.write('\n\033[35m[response headers]\033[0m\n')
         for i in output:
-            if isinstance(i, str):
-                tqdm.write(i, end='')
+            if isinstance(i, (str, bytes)):
+                tqdm.write(str(i), end='')
             else:
                 for k, v  in i.items():
                     tqdm.write(f'\033[34m{k}\033[0m: {v}')
@@ -635,7 +701,7 @@ request urls: {0}
         """
         ファイルパス変換をスタートする
         """
-        if self.option['conversion']:
+        if self.option['conversion'] and self.option['body']:
             self.log(20, 'converting... ')
             self.local_path_conversion(info)
             self.log(20, 'converting... '+'\033[32m' + 'done' + '\033[0m')
@@ -644,9 +710,9 @@ request urls: {0}
         """
         HTMLから見つかったファイルをダウンロード
         """
-        file: Tuple[str] = self.parse.splitext(url.rstrip('/'))
+        exts: Tuple[str, str] = self.parse.splitext(url)
         # フォーマットを元に保存ファイル名を決める
-        save_filename: str = self.option['formated'].replace('%(file)s', self.parse.get_filename(file[0])).replace('%(num)d', str(number))+(file[1] or '.html')
+        save_filename: str = self.option['formated'].replace('%(file)s', ''.join(self.parse.splitext(self.parse.get_filename(url)))).replace('%(num)d', str(number)).replace('%(ext)s', exts[1].lstrip('.'))
         if os.path.isfile(save_filename) and not self.ask_continue(f'{save_filename} has already existed\nCan I overwrite?'):
             return save_filename
         while True:
@@ -703,8 +769,6 @@ request urls: {0}
                     with open(path, 'r') as f:
                         source: str = f.read()
                     for from_, to in all_download_data[0].items():
-                        if from_ in {'#', '?'}:
-                            continue
                         source = source.replace(from_, to)
                     with open(path, 'w') as f:
                         f.write(source)
@@ -782,16 +846,17 @@ Output of bytes string
 -t, --timeout [timeout time (number)]
 Set the timeout time
 Please specify number
-Also, the -i option takes precedence over this option.
+Also, the -i option takes precedence over this option
 
 -x, --method [method]
 Communicate by specifying the communication method
 The default is get
 Communication that can be specified with -x, --method option
-get
-post
-delete
-put put
+
+- get
+- post
+- delete
+- put
 
 -S, --ignore-SSL
 Ignore SSL certificate validation
@@ -799,21 +864,21 @@ Ignore SSL certificate validation
 -n, --no-progress
 Do not show progress
 
--d, --data param1=value1 param2=value2 ...
+-d, --data param1=value1 param2=value2 
 Specify the data and parameters to send
 Specify as follows
-prop -d q = "hogehoge" hl = "fugafuga" URL
+prop -d q=hogehoge hl=fugafuga URL
 Please specify the -j option when sending in json format
 
 -j, --json
 Send data in json format
 
--H, --header HeaderName1=HeaderInformation1 HeaderName2=HeaderInformation2 ...
+-H, --header HeaderName1=HeaderInformation1 HeaderName2=HeaderInformation2 
 Communicate by specifying the header
 
 -a, --fake-user-agent [BrowserName]
 It use the automatically generated User-Agent
-In addition, it is also possible to specify the name of the browser to automatically generate the User-Agent.
+In addition, it is also possible to specify the name of the browser to automatically generate the User-Agent
 
 -c, --cookie cookie name 1 = information 1 cookie name 2 = information 2
 Communicate by specifying the cookies
@@ -823,7 +888,7 @@ Specify the proxy to use for communication
 
 --tor [port number (optional)]
 It use tor as a proxy
-If you omit the port number, 9050 will be used.
+If you omit the port number, 9050 will be used
 And, there are some things you need to do before using this option
 Windows:
 Just run tor.exe
@@ -838,7 +903,7 @@ $ sudo service tor start
 
 -F, --information
 Outputs only status code, redirect history, cookie information, response header information
-If you have specified this option and want to output to a file, use> (redirect) instead of the -o option.
+If you have specified this option and want to output to a file, use> (redirect) instead of the -o option
 
 -s, --search-words [words]
 Extracts and outputs the code such as the specified tag, class, id, etc. from the source code of the site
@@ -891,10 +956,10 @@ Display detailed information at the time of request
 
 -r, --recursive [Recursion count (optional)]
 Recursively download site text links
-When specifying this option, be sure to specify the output destination with the -o option (specify "directory" instead of file).
+When specifying this option, be sure to specify the output destination with the -o option (specify "directory" instead of file)
 Also, if you specify a directory that does not exist, a new one will be created.)
-If you do not specify the number of recursion, it will be executed as if 1 was specified.
-Also, if the -nE option is not specified, local path conversion will be performed automatically.
+If you do not specify the number of recursion, it will be executed as if 1 was specified
+Also, if the -nE option is not specified, local path conversion will be performed automatically
 
 -nc, --no-content
 It don't download images
@@ -913,36 +978,45 @@ External address sites are also downloaded
 
 -f, --format [format]
 You can specify the format of the file save name at the time of recursive download
-(If %(file)s is not included in the character string, it will not be reflected. Also, extension is given automatically)
-(* Suppose there are text links http://example.com/2 and http://example.com/3 in http://example.com)
+If "%(file)s" or "%(num)d" aren't included in the character string, it won't be applied because saved name isn't changed for each file
 
-prop -r -f "%(num)d-%(root)s-%(file)s" http://example.com
+Ex: Suppose there are text links https://example.com/2.html and https://example.com/3.html in https://example.com
 
->>> http://example.com saved as 0-example.com, http://example.com/2 saved as 1-example.com-2.html, http://example.com/3 saved as 2-example.com-3.html
+prop -r -f "%(num)d-%(root)s-%(file)s" https://example.com
+
+>>> https://example.com saved as 0-example.com, http://example.com/2 saved as 1-example.com-2.html, http://example.com/3 saved as 2-example.com-3.html
+
+prop -r -f "%(num)d.%(ext)s" https://www.example.com
+
+>>> https://example.com saved as 0.html, https://example.com/2.html saved as 1.html, https://example.com/3.html saved as 2.html
 
 Specifiable format
 
-%(root)s
-Hostname
+- %(root)s
+  Hostname
 
-%(file)s
-Web page file name (character string after the last / (slash) in the URL of the site)
+- %(file)s
+  Web page file name (character string after the last '/'  in the URL of the site)
+  And, this is automatically given an extension
 
-%(num)d
-Consecutive numbers
+- %(ext)s
+  File extension (not including '.')
+
+- %(num)d
+  Consecutive numbers
 
 -I, --interval [seconds]
 Specifies the interval for recursive downloads
 The default is 1 second
 
 -m, --multiprocess
-It use multi-thread processing when converting the URL reference destination of the downloaded.
-What you do with multithreading The processing time is greatly reduced.
+It use multi-thread processing when converting the URL reference destination of the downloaded
+What you do with multithreading The processing time is greatly reduced
 Recommended to specify
 
 -nd, --no-downloaded
 URLs that have already been downloaded will not be downloaded
-This option does not work properly if you delete the files under the ./data/ directory (even if you delete it, it will be newly generated when you download it again).
+This option does not work properly if you delete the files under the {history_directory} directory (even if you delete it, it will be newly generated when you download it again)
 
 -----The following special options-----
 
@@ -962,13 +1036,16 @@ Show the file which logs are written
 --history-directory
 Show the directory which files which histories are written are stored
 
+--cache-directory
+Show the directory which caches(stylesheet) were stored
+
 -U, --upgrade
-Update the prop.
+Update the prop
 
 -p, --parse
 Get HTML from standard input and parse it
-You can use the -s option to specify the search tag, class, and id.
-If you specify a URL when you specify this option, an error will occur.
+You can use the -s option to specify the search tag, class, and id
+If you specify a URL when you specify this option, an error will occur
 
 [About parser and default settings]
 
@@ -1020,7 +1097,7 @@ The options that can be changed are as follows
     "no_dl_external": true,
     "save_robots": true // this recommended to specify true
 }
-""".replace("{config_file}", setting.config_file).replace("{log_file}", setting.log_file))
+""".replace("{config_file}", setting.config_file).replace("{log_file}", setting.log_file).replace('{history_directory}', history.root))
 
 def conversion_arg(args: List[str]) -> list:
     result: list = []
@@ -1059,8 +1136,8 @@ def argument() -> (list, dict, logging.Logger.log):
         if len(arg) == 1:
             print("""
 prop <options> URL [URL...]
-\033[33mIf you want to see help message, please use '-h', '--help' options and you will see help
-            """)
+
+\033[33mIf you want to see help message, please use '-h', '--help' options and you will see help""")
             sys.exit(1)
         for n, args in enumerate(arg):
             if skip:
@@ -1071,7 +1148,10 @@ prop <options> URL [URL...]
                 sys.exit()
             elif args == '-o' or args == '--output':
                 # 出力先ファイルの設定
-                filename: str = arg[n+1]
+                try:
+                    filename: str = arg[n+1]
+                except IndexError:
+                    error.print(f"{args} [filename]\nPlease specify value of '{args}'")
                 if filename != '-':
                     option.config('filename', os.path.join('.', filename))
                     option.config('output', False)
@@ -1085,16 +1165,28 @@ prop <options> URL [URL...]
                 option.config('output', False)
                 option.config('bytes', True)
             elif args == '-t' or args == '--timeout':
-                timeout: int = arg[n+1]
+                try:
+                    timeout: int = arg[n+1]
+                except IndexError:
+                    error.print(f"{args} [timeout]\nPlease specify value of '{args}'")
                 if option.options.get('notimeout') is None:
-                    option.config('timeout', (3.0, float(timeout)))
+                    try:
+                        option.config('timeout', (3.0, float(timeout)))
+                    except ValueError:
+                        error.print(f"'{timeout}' is not int or float\nPlease specify int or float")
                 skip += 1
             elif args == '-i' or args == '--ignore':
                 option.config('timeout', None)
                 option.config('notimeout', True)
             elif args == '-x' or args == '--method':
-                method = arg[n+1].lower()
-                option.config('types', method)
+                try:
+                    method = arg[n+1].lower()
+                except IndexError:
+                    error.print(f"{args} [method]\nPlease specify value of '{args}'")
+                if method in {'get', 'post', 'put', 'delete'}:
+                    option.config('types', method)
+                else:
+                    error.print(f"'{method}' is unknown method")
                 skip += 1
             elif args == '-S' or args == '--ignore-SSL':
                 option.config('ssl', False)
@@ -1109,8 +1201,7 @@ prop <options> URL [URL...]
                         sys.stderr = _stderr
                 except Exception as e:
                     sys.stderr = _stderr
-                    print(e, file=sys.stderr)
-                    continue
+                    error.print(str(e))
                 try:
                     fake = ua[arg[n+1]]
                     skip += 1
@@ -1130,6 +1221,8 @@ prop <options> URL [URL...]
                         skip += 1
                     else:
                         break
+                if not params and not header:
+                    error.print(f"{args} [Name=Value] [Name=Value]...\nPlease specify the value of the '{args}' option")
                 if args == '-d' or args == '--data':
                     option.config('payload', params)
                 elif args == '-c' or args == '--cookie':
@@ -1160,31 +1253,34 @@ prop <options> URL [URL...]
                     option.config('search', word)
                     option.config('bytes', True)
                 except (error.ArgsError, IndexError):
-                    print(f'the specifying the argument of the {args} option is incorrect.', file=sys.stderr)
-                    sys.exit(1)
+                    error.print(f"The specifying the argument of the '{args}' option is incorrect")
                 except ValueError:
-                    print(f'Error: {fl[1]}\nplease type number')
+                    error.print(f'{fl[1]} is not number\nPlease specify number')
             elif args == '-l' or args == '--no-redirect':
                 option.config('redirect', False)
             elif args == '-D' or args == '-D': 
                 option.config('debug', True)
             elif args == '-u' or args == '--upload':
-                path = arg[n+1]
+                try:
+                    path = arg[n+1]
+                except IndexError:
+                    error.print(f"{args} [filepath]\nPlease specify value of '{args}'")
                 if os.path.exists(path):
                     option.config('upload', path)
                 else:
-                    print(f'the existence could not be confirmed: {path}', file=sys.stderr)
-                    sys.exit(1)
+                    error.print(f'The existence could not be confirmed: {path}')
             elif args == '-X' or args == '--proxy':
                 try:
                     proxy_url: str = arg[n+1]
                 except IndexError:
-                    print('please specify proxies.')
-                    sys.exit(1)
+                    error.print(f"{args} [Proxy]\nPlease specify value of '{args}'")
                 option.config('proxy', {"http": proxy_url, "https": proxy_url})
                 skip += 1
             elif args == '-R' or args == '--read-file':
-                file: str = arg[n+1]
+                try:
+                    file: str = arg[n+1]
+                except IndexError:
+                    error.print(f"{args} [filepath]\nPlease specify value of '{args}'")
                 urls: list = []
                 options: list = []
                 with open(file, 'r') as f:
@@ -1192,10 +1288,10 @@ prop <options> URL [URL...]
                 for n, a in enumerate(instruct):
                     del sys.argv[1:]
                     sys.argv.extend(_argsplit(a))
-                    url, option, log = argument()
+                    url, log, option = argument()
                     urls.append(url)
                     options.append(option)
-                return urls, options, log
+                return urls, log, options
             elif args == '-B' or args == '--basic-auth':
                 try:
                     user: str = arg[n+1]
@@ -1203,8 +1299,7 @@ prop <options> URL [URL...]
                     option.config('auth', HTTPBasicAuth(user, password))
                     skip += 2
                 except:
-                    print(f'the specifying the argument of the {args} option is incorrect\n{args} [UserName] [Password]', file=sys.stderr)
-                    sys.exit(1)
+                    error.print(f"{args} [UserName] [Password]\nThe specifying the argument of the '{args}' option is incorrect")
             elif args == '-r' or args == '--recursive':
                 try:
                     number: int = int(arg[n+1])
@@ -1218,15 +1313,14 @@ prop <options> URL [URL...]
                 if result2:
                     option.config('body', False)
                 if result1 and result2:
-                    print('the -nc and -nb options cannot be used together', file=sys.stderr)
+                    error.print("'-nc' and '-nb' options can't be used together")
                     sys.exit(1)
             elif args == '-st' or args == '--start':
                 try:
                     option.config("start", arg[n+1])
                     skip += 1
-                except:
-                    print(f'please specify "{args}"\'s value')
-                    sys.exit(1)
+                except IndexError:
+                    error.print(f"{args} [StartName]\nPlease specify value of '{args}'")
             elif args == '-np' or args == '--no-parent':
                 option.config('noparent', True)
             elif args in {'-nc', '-nb', '--no-content', '--no-body'}:
@@ -1236,11 +1330,9 @@ prop <options> URL [URL...]
                     limit = int(arg[n+1])
                     skip += 1
                 except IndexError:
-                    print('please set value of limit')
-                    sys.exit(1)
+                    error.print(f"{args} [limit]\nPlease specify value of '{args}'")
                 except ValueError:
-                    print('please specify a number for the value of limit')
-                    sys.exit(1)
+                    error.print('Please specify a number for the value of limit')
                 option.config('limit', limit)
             elif args == '-e' or args == '--no-catch-error':
                 option.config('caperror', False)
@@ -1251,9 +1343,14 @@ prop <options> URL [URL...]
             elif args == '-nd' or args == '--no-downloaded':
                 option.config('no_downloaded', True)
             elif args == '-f' or args == '--format':
-                string: str = arg[n+1]
+                try:
+                    string: str = arg[n+1]
+                except IndexError:
+                    error.print(f"{args} [format]\nPlease specify value of '{args}'")
                 if '%(file)s' in string or '%(num)d' in string:
                     option.config('format', string)
+                else:
+                    option.log(30, '\033[33mFormat specified by you isn\'t applied because "%(file)s" or "%(num)d" aren\'t in it\nIf you want to know why it isn\'t applied without them, please see help message for more information\033[0m')
                 skip += 1
             elif args == '-F' or args == '--information':
                 option.config('info', True)
@@ -1262,9 +1359,10 @@ prop <options> URL [URL...]
                     interval: float = float(arg[n+1])
                     option.config('interval', interval)
                     skip += 1
-                except (IndexError, ValueError):
-                    print(f'please specify the argument of the {args} option')
-                    sys.exit(1)
+                except IndexError:
+                    error.print(f"{args} [interval]\nPlease specify value of '{args}'")
+                except ValueError:
+                    error.print(f"Please specify int or float to value of '{args}'")
             elif args == '-m' or args == '--multiprocess':
                 option.config('multiprocess', True)
             elif args == '--tor':
@@ -1283,6 +1381,7 @@ prop <options> URL [URL...]
                 option.config('parse', html)
             elif args == '--clear':
                 option.clear()
+                sys.exit()
             elif args == "--config-file":
                 print(setting.config_file)
                 sys.exit()
@@ -1292,8 +1391,11 @@ prop <options> URL [URL...]
             elif args == "--history-directory":
                 print(history.root)
                 sys.exit()
+            elif args == "--cache-directory":
+                print(cache.root)
+                sys.exit()
             elif args == "-U" or args == "--upgrade":
-                subprocess.run(["pip", "install", "--upgrade", "git+https://github.com/mino-38/prop"])
+                subprocess.run(["pip", "install", "--no-cache-dir", "--upgrade", "https://github.com/mino-38/prop/archive/refs/heads/main.zip"])
                 sys.exit()
             else:
                 url.append(args)
@@ -1321,6 +1423,8 @@ def main() -> None:
         elif option['parse']:
             dl: downloader = downloader(url, option, option['parser'])
             print(dl.parse.html_extraction(option['parse'], option['search']))
+        elif url == []:
+            error.print('Missing value for URL\nPlease specify URL')
 
 def start(dl):
     if dl.option['caperror']:
