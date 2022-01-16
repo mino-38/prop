@@ -156,11 +156,7 @@ $ rm -r $(prop --history-directory)
 ```
 
 # 新機能
-- 特殊フォーマットに%(ext)s を追加
-
-- キャッシュ機能の実装
-
-- その他バグの修正
+- バグ修正
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
