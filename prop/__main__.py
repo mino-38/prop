@@ -163,7 +163,7 @@ class history:
         self.domain = urlparse(url).netloc
         self.history_file = os.path.join(history.root, self.domain+'.txt')
         if not os.path.isdir(history.root):
-            os.mkdir(self.root)
+            os.mkdir(history.root)
 
     def write(self, content: str or list, end: str = '\n') -> None:
         if isinstance(content, list):
@@ -342,9 +342,8 @@ class parser:
     def _get_count(self):
         files = list(filter(lambda p: bool(re.match(self.option['formated'].replace('%(num)d', r'\d+').replace('%(file)s', '.*').replace('%(ext)s', '.*'), p)), os.listdir()))
         if files:
-            r = re.search(r'\d+', max(files))
-            if r:
-                return int(r.group())+1
+            r = max(map(lambda p: int(re.search(r'\d+', p).group()), files))
+            return r+1
         return 0
 
     def spider(self, response, *, h=sys.stdout, session) -> Tuple[dict, list]:
@@ -353,11 +352,10 @@ class parser:
         """
         temporary_list: list = []
         temporary_list_urls: list = []
-        saved_images_file_list: list = []
         if '%(num)d' in self.option['formated']:
             count = self._get_count()
         else:
-            count = 0
+            count = 0          
         max = self.option['interval']+3
         info_file = os.path.join('styles', '.prop_info.json')
         if self.option['no_downloaded']:
@@ -372,6 +370,9 @@ class parser:
             WebSiteData: dict = {response.url: response.url}
         else:
             WebSiteData: dict = dict()
+        if os.path.isfile(info_file):
+            with open(info_file, 'r') as f:
+                WebSiteData.update(json.load(f))
         root_url: str = self.get_rootdir(response.url)
         # ↑ホームURLを取得
         cwd_urls: List[str] = [response.url]
@@ -436,9 +437,6 @@ class parser:
                                         continue
                             WebSiteData[from_url] = result
                         self.dl.option['formated'] = before_fmt
-                    elif not self.option['check_only']:
-                        with open(info_file, 'r') as f:
-                            WebSiteData.update(json.load(f))
                     if self.option['progress']:
                         a_info = tqdm(a_data.items(), leave=False, desc="'a tag'")
                     else:
@@ -458,8 +456,8 @@ class parser:
                                 else:
                                     if not self.is_success_status(res.status_code):
                                         break
-                                    count += 1
                                     result = self.dl.recursive_download(res.url, res.text, count)
+                                    count += 1
                                     WebSiteData[from_url] = result
                                 break
                             except Exception as e:
@@ -490,10 +488,9 @@ class parser:
                                 if self.option['check_only']:
                                     WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'Not'
                                 else:
-                                    count += 1
                                     result = self.dl.recursive_download(res.url, res.content, count)
+                                    count += 1
                                     WebSiteData[from_url] = result
-                                    saved_images_file_list.append(result)
                                 break
                             except Exception as e:
                                 if i >= self.option['reconnect']-1:
@@ -513,11 +510,10 @@ class parser:
             for k, v in WebSiteData.items():
                 print('{}  ... {}{}\033[0m'.format(k, '\033[32m' if v == 'Exists' else '\033[31m', v))
             sys.exit()
-        else:
-            if os.path.isdir('styles'):
-                with open(info_file, 'w') as f:
-                    json.dump(WebSiteData, f, indent=4, ensure_ascii=False)
-        return WebSiteData, saved_images_file_list
+        elif os.path.isdir('styles'):
+            with open(info_file, 'w') as f:
+                json.dump(WebSiteData, f, indent=4, ensure_ascii=False)
+        return WebSiteData
 
 class downloader:
     """
@@ -739,7 +735,7 @@ request urls: {0}
     def local_path_conversion(self, conversion_urls: Tuple[dict, list]) -> None:
         if self.option['conversion'] and self.option['body']:
             if self.option['multiprocess']:
-                to_path: List[str] = list(conversion_urls[0].values())
+                to_path: List[str] = list(conversion_urls.values())
                 splited_path_list: List[str] = self._split_list(to_path, 4) # 4分割
                 processes: list = []
                 for path in splited_path_list[1:]:
@@ -756,19 +752,18 @@ request urls: {0}
                         p.join()
                         self.log(20, f'#{n+1}'+'\033[32m'+'done'+'\033[0m')
             else:
-                self.conversion_path(list(conversion_urls[0].values()), conversion_urls, self.option['formated'])
+                self.conversion_path(list(conversion_urls.values()), conversion_urls, self.option['formated'])
 
     def conversion_path(self, task: List[str], all_download_data: Tuple[dict, list], save_fmt: str) -> None:
         # URL変換
-        ignore = all_download_data[1]
         for path in task:
             while True:
                 try:
-                    if path in ignore:
+                    if not path.endswith('.html'):
                         break
                     with open(path, 'r') as f:
                         source: str = f.read()
-                    for from_, to in all_download_data[0].items():
+                    for from_, to in all_download_data.items():
                         source = source.replace(from_, to)
                     with open(path, 'w') as f:
                         f.write(source)
@@ -1438,8 +1433,8 @@ def start(dl):
             dl.log(40, f"Timed out while downloading '{url}'")
         except error.ConnectError as e:
             dl.log(40, e)
-        except Exception as e:
-            dl.log(40, e)
+        #except Exception as e:
+            #dl.log(40, e)
     else:
         try:
             dl.start()
