@@ -372,6 +372,9 @@ class parser:
             WebSiteData: dict = {response.url: response.url}
         else:
             WebSiteData: dict = dict()
+        if os.path.isfile(info_file):
+            with open(info_file, 'r') as f:
+                WebSiteData.update(json.load(f))
         root_url: str = self.get_rootdir(response.url)
         # ↑ホームURLを取得
         cwd_urls: List[str] = [response.url]
@@ -436,9 +439,6 @@ class parser:
                                         continue
                             WebSiteData[from_url] = result
                         self.dl.option['formated'] = before_fmt
-                    elif not self.option['check_only']:
-                        with open(info_file, 'r') as f:
-                            WebSiteData.update(json.load(f))
                     if self.option['progress']:
                         a_info = tqdm(a_data.items(), leave=False, desc="'a tag'")
                     else:
@@ -513,7 +513,7 @@ class parser:
             for k, v in WebSiteData.items():
                 print('{}  ... {}{}\033[0m'.format(k, '\033[32m' if v == 'Exists' else '\033[31m', v))
             sys.exit()
-        elif os.path.isdir('styles') and self.option['body']:
+        elif os.path.isdir('styles'):
             with open(info_file, 'w') as f:
                 json.dump(WebSiteData, f, indent=4, ensure_ascii=False)
         return WebSiteData, saved_images_file_list
