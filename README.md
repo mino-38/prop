@@ -141,8 +141,11 @@ $ prop -r -f "test-%(num)d.%(ext)s" -o store_ directory URL
 # ログの簡単な見方
 $ cat $(prop --log-file)
 
-履歴一覧
+# 履歴一覧
 $ ls $(prop --history-directory)
+
+# キャッシュの保存先
+$ prop --cache-directory
 ```
 
 また、--clearオプションでログを全て削除することができます(履歴の削除は手作業でやるかhistoryディレクトリを削除してください)
@@ -153,6 +156,9 @@ $ prop --clear
 
 # 履歴の削除の仕方
 $ rm -r $(prop --history-directory)
+
+# キャッシュの削除の仕方
+$ rm -r $(prop --cache-directory)
 ```
 
 # 新機能
