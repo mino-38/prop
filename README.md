@@ -134,8 +134,8 @@ $ prop -r -f "test-%(num)d.%(ext)s" -o store_ directory URL
 -h, --helpオプションを使用するとヘルプが表示されます  
 ここに載っているオプションも含めて説明しているので、そちらをご覧ください
 
-# 履歴、ログの保存先
-履歴の保存場所は--history-directory、ログの書き込み先は--log-fileオプションで見ることができます
+# 履歴、ログ、キャッシュの保存先
+履歴の保存場所は--history-directory、ログの書き込み先は--log-fileオプション、キャッシュの保存先は--cache-directoryで見ることができます
 
 ```bash
 # ログの簡単な見方
@@ -148,7 +148,7 @@ $ ls $(prop --history-directory)
 $ prop --cache-directory
 ```
 
-また、--clearオプションでログを全て削除することができます(履歴の削除は手作業でやるかhistoryディレクトリを削除してください)
+また、--clearオプションでログを全て削除することができます(履歴、及びキャッシュの削除は手作業でやるかhistory、cacheディレクトリを削除してください)
 
 ```bash
 # ログの消し方
