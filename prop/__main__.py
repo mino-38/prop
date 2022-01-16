@@ -513,10 +513,9 @@ class parser:
             for k, v in WebSiteData.items():
                 print('{}  ... {}{}\033[0m'.format(k, '\033[32m' if v == 'Exists' else '\033[31m', v))
             sys.exit()
-        else:
-            if os.path.isdir('styles'):
-                with open(info_file, 'w') as f:
-                    json.dump(WebSiteData, f, indent=4, ensure_ascii=False)
+        elif os.path.isdir('styles') and self.option['body']:
+            with open(info_file, 'w') as f:
+                json.dump(WebSiteData, f, indent=4, ensure_ascii=False)
         return WebSiteData, saved_images_file_list
 
 class downloader:
