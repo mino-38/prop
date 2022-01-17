@@ -344,8 +344,11 @@ class parser:
         if files:
             string = self.option['formated'].split('%(num)d')
             start = len(string[0])
-            end = string[1][0]
-            num = map(lambda p: int(p[start:p.find(end, start)]), files)
+            if string[1]:
+                end = string[1][0]
+                num = map(lambda p: int(p[start:p.find(end, start)]), files)
+            else:
+                num = map(lambda p: int(p[start:]), files)
             return max(num)+1
         return 0
 
