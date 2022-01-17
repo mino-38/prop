@@ -156,7 +156,7 @@ $ rm -r $(prop --history-directory)
 ```
 
 # 新機能
-- バグ修正
+- 連番生成についてのバグを修正
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
