@@ -345,7 +345,7 @@ class parser:
             string = self.option['formated'].split('%(num)d')
             start = len(string[0])
             end = string[1][0]
-            num = map(lambda p: int(p[start:][:p.find(end)], files))
+            num = map(lambda p: int(p[start:p.find(end, start)]), files)
             return max(num)+1
         return 0
 
@@ -701,9 +701,9 @@ request urls: {0}
         ファイルパス変換をスタートする
         """
         if self.option['conversion'] and self.option['body']:
-            self.log(20, 'converting... ')
+            self.log(20, 'convert... ')
             self.local_path_conversion(info)
-            self.log(20, 'converting... '+'\033[32m' + 'done' + '\033[0m')
+            self.log(20, 'convert... '+'\033[32m' + 'done' + '\033[0m')
 
     def recursive_download(self, url: str, source: bytes or str, number: int=0) -> str:
         """
@@ -1346,8 +1346,8 @@ prop <options> URL [URL...]
                 except IndexError:
                     error.print(f"{args} [format]\nPlease specify value of '{args}'")
                 if '%(file)s' in string or '%(num)d' in string:
-                    if ('%(file)s' in string and (not string.endswith('%(file)s') or 1 < string.count('%(file)s'))) or (1 < string.count('%(num)d')):
-                        print("\033[33mSorry, '%(file)s' format can only be at the end, and '%(num)d' format cannot include more than one because it is not possible to generate an accurate serial number\033[0m")
+                    if ('%(file)s' in string and (not string.endswith('%(file)s') or 1 < string.count('%(file)s'))) or (1 < string.count('%(num)d')) or any(map(string.__contains__, ['%(num)d%(file)s', '%(num)d%(ext)s'])):
+                        print("\033[33mSorry, '%(file)s' or '%(ext)s' format can only be at the end, '%(num)d' format cannot include more than one, and '%(num)d%(file)s' or '%(num)d%(ext)s' cannot include format because it is not possible to generate an accurate serial number\033[0m")
                         sys.exit(1)
                     option.config('format', string)
                 else:
