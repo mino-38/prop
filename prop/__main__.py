@@ -340,7 +340,7 @@ class parser:
         return data
 
     def _get_count(self):
-        files = list(filter(lambda p: bool(re.match(self.option['formated'].replace('%(num)d', r'\d+').replace('%(file)s', '.*').replace('%(ext)s', '.*'), p)), os.listdir()))
+        files = list(filter(lambda p: bool(re.match(self.option['formated'].replace('.', r'\.').replace('%(num)d', r'\d+').replace('%(file)s', '.*').replace('%(ext)s', '.*'), p)), os.listdir()))
         if files:
             string = self.option['formated'].split('%(num)d')
             start = len(string[0])
