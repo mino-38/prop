@@ -340,11 +340,13 @@ class parser:
         return data
 
     def _get_count(self):
-        files = list(filter(lambda p: bool(re.match(self.option['formated'].replace('%(num)d', r'\d+').replace('%(file)s', '.*').replace('%(ext)s', '.*'), p)), os.listdir()))
+        files = list(filter(lambda p: bool(re.match(self.option['formated'].replace('.', r'\.').replace('%(num)d', r'\d+').replace('%(file)s', '.*').replace('%(ext)s', '.*'), p)), os.listdir()))
         if files:
-            r = re.search(r'\d+', max(files))
-            if r:
-                return int(r.group())+1
+            string = self.option['formated'].split('%(num)d')
+            start = len(string[0])
+            end = string[1][0]
+            num = map(lambda p: int(p[start:p.find(end, start)]), files)
+            return max(num)+1
         return 0
 
     def spider(self, response, *, h=sys.stdout, session) -> Tuple[dict, list]:
@@ -353,11 +355,10 @@ class parser:
         """
         temporary_list: list = []
         temporary_list_urls: list = []
-        saved_images_file_list: list = []
         if '%(num)d' in self.option['formated']:
             count = self._get_count()
         else:
-            count = 0
+            count = 0          
         max = self.option['interval']+3
         info_file = os.path.join('styles', '.prop_info.json')
         if self.option['no_downloaded']:
@@ -458,8 +459,8 @@ class parser:
                                 else:
                                     if not self.is_success_status(res.status_code):
                                         break
-                                    count += 1
                                     result = self.dl.recursive_download(res.url, res.text, count)
+                                    count += 1
                                     WebSiteData[from_url] = result
                                 break
                             except Exception as e:
@@ -490,10 +491,9 @@ class parser:
                                 if self.option['check_only']:
                                     WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'Not'
                                 else:
-                                    count += 1
                                     result = self.dl.recursive_download(res.url, res.content, count)
+                                    count += 1
                                     WebSiteData[from_url] = result
-                                    saved_images_file_list.append(result)
                                 break
                             except Exception as e:
                                 if i >= self.option['reconnect']-1:
@@ -516,7 +516,7 @@ class parser:
         elif os.path.isdir('styles'):
             with open(info_file, 'w') as f:
                 json.dump(WebSiteData, f, indent=4, ensure_ascii=False)
-        return WebSiteData, saved_images_file_list
+        return WebSiteData
 
 class downloader:
     """
@@ -701,9 +701,9 @@ request urls: {0}
         ファイルパス変換をスタートする
         """
         if self.option['conversion'] and self.option['body']:
-            self.log(20, 'converting... ')
+            self.log(20, 'convert... ')
             self.local_path_conversion(info)
-            self.log(20, 'converting... '+'\033[32m' + 'done' + '\033[0m')
+            self.log(20, 'convert... '+'\033[32m' + 'done' + '\033[0m')
 
     def recursive_download(self, url: str, source: bytes or str, number: int=0) -> str:
         """
@@ -738,7 +738,7 @@ request urls: {0}
     def local_path_conversion(self, conversion_urls: Tuple[dict, list]) -> None:
         if self.option['conversion'] and self.option['body']:
             if self.option['multiprocess']:
-                to_path: List[str] = list(conversion_urls[0].values())
+                to_path: List[str] = list(conversion_urls.values())
                 splited_path_list: List[str] = self._split_list(to_path, 4) # 4分割
                 processes: list = []
                 for path in splited_path_list[1:]:
@@ -755,19 +755,18 @@ request urls: {0}
                         p.join()
                         self.log(20, f'#{n+1}'+'\033[32m'+'done'+'\033[0m')
             else:
-                self.conversion_path(list(conversion_urls[0].values()), conversion_urls, self.option['formated'])
+                self.conversion_path(list(conversion_urls.values()), conversion_urls, self.option['formated'])
 
     def conversion_path(self, task: List[str], all_download_data: Tuple[dict, list], save_fmt: str) -> None:
         # URL変換
-        ignore = all_download_data[1]
         for path in task:
             while True:
                 try:
-                    if path in ignore:
+                    if not path.endswith('.html'):
                         break
                     with open(path, 'r') as f:
                         source: str = f.read()
-                    for from_, to in all_download_data[0].items():
+                    for from_, to in all_download_data.items():
                         source = source.replace(from_, to)
                     with open(path, 'w') as f:
                         f.write(source)
@@ -1235,7 +1234,11 @@ prop <options> URL [URL...]
                     word = {'words': {}, 'limit': None}
                     for n, i in enumerate(arg[n+1:]):
                         fl = i.split('=', 2)
-                        if len(fl) == 2:
+                        if (n == 0 and len(i) == 1) or re.match(r'.*\[.*=.*\]$', i):
+                            word['css'] = i
+                            skip += 1
+                            break
+                        elif len(fl) == 2:
                             if  fl[0] != 'limit' and fl[0] != 'tags':
                                 word['words'][fl[0]] = fl[1].split(',')
                             elif fl[0] == 'tags':
@@ -1243,10 +1246,6 @@ prop <options> URL [URL...]
                             else:
                                 option.config('limit', int(fl[1]))
                             skip += 1
-                        elif n == 0:
-                            word['css'] = i
-                            skip += 1
-                            break
                         else:
                             break
                     option.config('search', word)
@@ -1347,6 +1346,9 @@ prop <options> URL [URL...]
                 except IndexError:
                     error.print(f"{args} [format]\nPlease specify value of '{args}'")
                 if '%(file)s' in string or '%(num)d' in string:
+                    if ('%(file)s' in string and (not string.endswith('%(file)s') or 1 < string.count('%(file)s'))) or (1 < string.count('%(num)d')) or any(map(string.__contains__, ['%(num)d%(file)s', '%(num)d%(ext)s'])):
+                        print("\033[33mSorry, '%(file)s' or '%(ext)s' format can only be at the end, '%(num)d' format cannot include more than one, and '%(num)d%(file)s' or '%(num)d%(ext)s' cannot include format because it is not possible to generate an accurate serial number\033[0m")
+                        sys.exit(1)
                     option.config('format', string)
                 else:
                     option.log(30, '\033[33mFormat specified by you isn\'t applied because "%(file)s" or "%(num)d" aren\'t in it\nIf you want to know why it isn\'t applied without them, please see help message for more information\033[0m')
@@ -1437,8 +1439,8 @@ def start(dl):
             dl.log(40, f"Timed out while downloading '{url}'")
         except error.ConnectError as e:
             dl.log(40, e)
-        except Exception as e:
-            dl.log(40, e)
+        #except Exception as e:
+            #dl.log(40, e)
     else:
         try:
             dl.start()
