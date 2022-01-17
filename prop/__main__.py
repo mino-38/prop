@@ -342,8 +342,11 @@ class parser:
     def _get_count(self):
         files = list(filter(lambda p: bool(re.match(self.option['formated'].replace('%(num)d', r'\d+').replace('%(file)s', '.*').replace('%(ext)s', '.*'), p)), os.listdir()))
         if files:
-            r = max(map(lambda p: int(re.search(r'\d+', p).group()), files))
-            return r+1
+            string = self.option['formated'].split('%(num)d')
+            start = len(string[0])
+            end = string[1][0]
+            num = map(lambda p: int(p[start:][:p.find(end)], files))
+            return max(num)+1
         return 0
 
     def spider(self, response, *, h=sys.stdout, session) -> Tuple[dict, list]:
@@ -1343,6 +1346,9 @@ prop <options> URL [URL...]
                 except IndexError:
                     error.print(f"{args} [format]\nPlease specify value of '{args}'")
                 if '%(file)s' in string or '%(num)d' in string:
+                    if ('%(file)s' in string and (not string.endswith('%(file)s') or 1 < string.count('%(file)s'))) or (1 < string.count('%(num)d')):
+                        print("\033[33mSorry, '%(file)s' format can only be at the end, and '%(num)d' format cannot include more than one because it is not possible to generate an accurate serial number\033[0m")
+                        sys.exit(1)
                     option.config('format', string)
                 else:
                     option.log(30, '\033[33mFormat specified by you isn\'t applied because "%(file)s" or "%(num)d" aren\'t in it\nIf you want to know why it isn\'t applied without them, please see help message for more information\033[0m')
