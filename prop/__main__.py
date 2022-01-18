@@ -1237,7 +1237,7 @@ prop <options> URL [URL...]
                     word = {'words': {}, 'limit': None}
                     for n, i in enumerate(arg[n+1:]):
                         fl = i.split('=', 2)
-                        if (n == 0 and len(i) == 1) or re.match(r'.*\[.*=.*\]$', i):
+                        if (n == 0 and len(fl) == 1) or re.match(r'.*\[.*=.*\]$', i):
                             word['css'] = i
                             skip += 1
                             break
