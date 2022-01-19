@@ -1350,7 +1350,15 @@ prop <options> URL [URL...]
                     error.print(f"{args} [format]\nPlease specify value of '{args}'")
                 if '%(file)s' in string or '%(num)d' in string:
                     if re.match(r'%\(num\)d[0-9]', string) or ('%(file)s' in string and (not string.endswith('%(file)s') or 1 < string.count('%(file)s'))) or (1 < string.count('%(num)d')) or any(map(string.__contains__, ['%(num)d%(file)s', '%(num)d%(ext)s'])):
-                        print("\033[33mSorry, '%(file)s' or '%(ext)s' format can only be at the end, '%(num)d' format cannot include more than one, numbers cannot be used immediately after '%(num)d', and '%(num)d%(file)s' or '%(num)d%(ext)s' cannot include format because it is not possible to generate an accurate serial number\033[0m")
+                        print("""\033[33mSorry, about format, there are the following restrictions because it will not able to generate an accurate serial number
+
+-  '%(file)s' and '%(ext)s' format can only be at the end
+
+-  '%(num)d' format cannot include more than one
+
+-  Numbers cannot be used immediately after '%(num)d'
+
+-  '%(num)d%(file)s' and '%(num)d%(ext)s' cannot include in format\033[0m""")
                         sys.exit(1)
                     option.config('format', string)
                 else:
