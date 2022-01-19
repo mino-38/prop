@@ -1442,8 +1442,8 @@ def start(dl):
             dl.log(40, f"Timed out while downloading '{url}'")
         except error.ConnectError as e:
             dl.log(40, e)
-        #except Exception as e:
-            #dl.log(40, e)
+        except Exception as e:
+            dl.log(40, e)
     else:
         try:
             dl.start()
