@@ -369,7 +369,8 @@ class parser:
         else:
             downloaded: set = set()
         if self.option['body'] and not self.option['start'] and not self.option['check_only'] and not (self.option['no_downloaded'] and response.url.rstrip('/') in downloaded):
-            root = self.dl.recursive_download(response.url, response.text)
+            root = self.dl.recursive_download(response.url, response.text, count)
+            count += 1
             WebSiteData: dict = {response.url: root}
             h.write(response.url.rstrip('/'))
         elif self.option['check_only']:
@@ -451,7 +452,7 @@ class parser:
                         for i in range(self.option['reconnect']+1):
                             try:
                                 res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
-                                temporary_list.append(res.content) # BeautifulSoupにはバイト型を渡したほうが文字化けが少なくなるらしいのでバイト型
+                                temporary_list.append(res.content)
                                 temporary_list_urls.append(res.url)
                                 h.write(target_url)
                                 if self.option['debug']:
