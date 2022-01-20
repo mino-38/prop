@@ -815,8 +815,8 @@ request urls: {0}
             if res in {'y', 'n', 'yes', 'no'}:
                 break
             print('\033[1A\r', end='')
-        print('\033[1A\r\033[1J', end='')
-        print('\033[1A\r\033[1J', end='', file=sys.stderr)
+        print('\033[1A\r\033[0J', end='')
+        print('\033[1A\r\033[0J', end='', file=sys.stderr)
         sys.stdout.flush()
         sys.stderr.flush()
         return res in {'y', 'yes'}
