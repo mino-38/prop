@@ -163,7 +163,7 @@ $ rm -r $(prop --cache-directory)
 ```
 
 # 新機能
-- 連番生成についてのバグを修正
+- -f, --formatオプションで指定できるフォーマットに制限を追加
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
