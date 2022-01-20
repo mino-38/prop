@@ -1350,7 +1350,7 @@ prop <options> URL [URL...]
                     error.print(f"{args} [format]\nPlease specify value of '{args}'")
                 if '%(file)s' in string or '%(num)d' in string:
                     if re.match(r'%\(num\)d[0-9]', string) or ('%(file)s' in string and (not string.endswith('%(file)s') or 1 < string.count('%(file)s'))) or (1 < string.count('%(num)d')) or any(map(string.__contains__, ['%(num)d%(file)s', '%(num)d%(ext)s'])):
-                        print("""\033[33mSorry, about format, there are the following restrictions because it will not able to generate an accurate serial number
+                        print("""\033[33mSorry, about format, there are the following restrictions because it will not be able to generate an accurate serial number
 
 - '%(file)s' and '%(ext)s' format can only be at the end
 
@@ -1407,7 +1407,6 @@ prop <options> URL [URL...]
                 print(cache.root)
                 sys.exit()
             elif args == "-U" or args == "--upgrade":
-                subprocess.run(["pip", "uninstall", "-y", "prop"])
                 subprocess.run(["pip", "install", "--no-cache-dir", "--upgrade", "https://github.com/mino-38/prop/archive/refs/heads/main.zip"])
                 sys.exit()
             else:
