@@ -3,11 +3,7 @@
 
 # インストール
 ```bash
-# gitコマンドがある人
-$ pip install git+https://github.com/mino-38/prop
-
-# gitコマンドがない人
-$ pip install https://github.com/mino-38/prop/archive/refs/heads/main.zip
+$ pip install prop-request
 ```
 
 # 基本的な使い方

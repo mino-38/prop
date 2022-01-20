@@ -1407,7 +1407,7 @@ prop <options> URL [URL...]
                 print(cache.root)
                 sys.exit()
             elif args == "-U" or args == "--upgrade":
-                subprocess.run(["pip", "install", "--no-cache-dir", "--upgrade", "https://github.com/mino-38/prop/archive/refs/heads/main.zip"])
+                subprocess.run(["pip", "install", "--upgrade", "prop-request"])
                 sys.exit()
             else:
                 url.append(args)

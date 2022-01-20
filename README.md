@@ -6,11 +6,7 @@ You can download files recursively, extract specific tags from html, etc.
 
 # Install
 ```bash
-# If you have the git command
-$ pip install git+https://github.com/mino-38/prop
-
-# If you don't have git command
-$ pip install https://github.com/mino-38/prop/archive/refs/heads/main.zip
+$ pip install prop-request
 ```
 
 # Usage
