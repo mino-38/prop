@@ -1,3 +1,6 @@
+# First
+If you want to read README in Japanease, please read [this](https://github.com/mino-38/prop/blob/main/README_ja.md).
+
 # What it can do
 You can download files recursively, extract specific tags from html, etc.
 
