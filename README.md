@@ -29,7 +29,7 @@ Fake the UserAgent value.
 
 ## -U, --upgrade
 Update prop.  
-This is just running pip install --no-cache-dir --upgrade https://github.com/mino-38/prop/archive/refs/heads/main.zip, so you can run this directly.
+This is just running pip install --no-cache-dir --upgrade prop-request, so you can run this directly.
 
 ## -s, --search-words [search-words]
 You can search from the html code of the specified URL.  
