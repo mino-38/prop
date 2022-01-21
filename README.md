@@ -124,10 +124,8 @@ Also, there are some restrictions: %(file)s and %(ext)s formats can only be used
 |  ----  |  ----  |  ----  |
 |  -np  |  --no-parent  |  option to ignore URLs in the hierarchy above the starting URL |
 |  -nc  |  --no-content  | option to target only URLs with the href attribute of the a tag  |
-|  -nc  |  --no-content  |  option to ignore URLs of href attribute of a tag  |
 |  -nb  |  --no-body  |  option to ignore URLs of src attribute of img tag  |
-|  -nd  |  --no-downloaded  |  Option to ignore files that have already been downloaded.
-|  -nd  |  --no-downloaded  |  option to ignore already downloaded files  |
+|  -nd  |  --no-downloaded  |  option to ignore files that have already been downloaded.
 |  -dx  |  --download-external  | option to include URLs of external sites in the download  |
 |  -st  |  --start  |  Option to specify a file name to start downloading  |
 
