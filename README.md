@@ -78,7 +78,7 @@ $ prop -R instruct.txt
 ## -r, --recursive [number of levels to go down]
 Recursive download from the specified URL.  
 If the number of descending levels is not specified, it is assumed to be 1.  
-The target of the recursive download is the URL specified in the href attribute of the a tag and the src attribute of the img.  
+The target of the recursive download is the URL specified in the href attribute of the 'a' tag and the src attribute of the img.  
 If the -nE option is not specified, it will automatically replace the reference to the local file after downloading.  
 
 
@@ -123,8 +123,8 @@ Also, there are some restrictions: %(file)s and %(ext)s formats can only be used
 |  short option name  |  long option name  |  processing  |
 |  ----  |  ----  |  ----  |
 |  -np  |  --no-parent  |  option to ignore URLs in the hierarchy above the starting URL |
-|  -nc  |  --no-content  | option to target only URLs with the href attribute of the a tag  |
-|  -nb  |  --no-body  |  option to ignore URLs of src attribute of img tag  |
+|  -nc  |  --no-content  | option to target only URLs with the href attribute of the 'a' tag  |
+|  -nb  |  --no-body  |  option to ignore URLs of src attribute of 'img' tag  |
 |  -nd  |  --no-downloaded  |  option to ignore files that have already been downloaded.
 |  -dx  |  --download-external  | option to include URLs of external sites in the download  |
 |  -st  |  --start  |  Option to specify a file name to start downloading  |
