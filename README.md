@@ -53,7 +53,7 @@ Ex:
 $ prop -s tags=a,script limit=5 URL
 
 -> Get 5 tags from the URL source code.
-Ex: ````bash $ prop -s tags=a,script limit=5
+```
 
 ## -M, --limit [limit]
 Specify the number of files to download recursively, or the number of results to retrieve with the -s, --search option.
@@ -65,10 +65,10 @@ Also, since the session is retained, it is possible to access the file after log
 Ex:  
 Contents of instruct.txt
 
-````
+```
 -a -n -d name=hoge password=hogehoge -o /dev/null https://www.example.com/login.php
 -O https://www.example.com/page.html
-``` ``bash
+```
 
 ```bash
 $ prop -R instruct.txt
@@ -114,7 +114,7 @@ $ prop -r -f "%(num)dtest-%(file)s" -o store_ directory URL
 $ prop -r -f "test-%(num)d.%(ext)s" -o store_ directory URL
 
 -> store_directory/test-0.[ext], store_directory/test-1[ext] ... Download as
-````
+```
 
 Note that if the format does not include %(num)d or %(file)s, it will not be reflected (because the store name does not change dynamically).  
 Also, there are some restrictions: %(file)s and %(ext)s formats can only be used at the end, more than one %(num)d cannot be used, and special formats such as %(num)d%(file)s cannot be used consecutively (because it is impossible to generate an exact sequential number for %(num)d).
