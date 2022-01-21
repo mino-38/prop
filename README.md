@@ -99,7 +99,6 @@ The special format is as follows
 |  format  |  value to be assigned  |
 |  ----  |  ----  |
 |  %(root)s  |  hostname of the download source  |
-|  %(root)s  |  hostname of download source  |
 |  %(file)s  |  file name of download source  |
 |  %(num)d  |  sequential number starting from 0  |
 |  %(ext)s   |  file extension  |
