@@ -131,7 +131,7 @@ Also, there are some restrictions: %(file)s and %(ext)s formats can only be used
 The -nc and -nb options cannot be used together.
 
 ## For options not listed here
-Use the -h and --help options to display help.  
+Use the -h and --help options to see help message.  
 Please refer to the help page, which includes the options listed here.
 
 # Where to save history, logs, and cache
