@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import glob
 import json
 import logging
 import math
@@ -1025,6 +1026,12 @@ This option does not work properly if you delete the files under the {history_di
 --clear
 Erase all the contents of the log file ({log_file})
 
+--purge-history
+Remove all histories
+
+--purge-cache
+Remove all caches
+
 -C, --check
 Does not download, only checks if the specified URL exists
 Checks recursively when used with the -r option
@@ -1406,6 +1413,22 @@ prop <options> URL [URL...]
                 sys.exit()
             elif args == "--cache-directory":
                 print(cache.root)
+                sys.exit()
+            elif args == "--purge-history":
+                if os.path.isdir(history.root):
+                    files = len(glob.glob(os.path.join(history.root, "**"), recursive=True))
+                    shutil.rmtree(history.root)
+                    print(f'Removed: {files}')
+                else:
+                    print('No history')
+                sys.exit()
+            elif args == "--purge-cache":
+                if os.path.isdir(cache.root):
+                    files = len(glob.glob(os.path.join(cache.root, "**"), recursive=True))
+                    shutil.rmtree(cache.root)
+                    print(f'Removed: {files}')
+                else:
+                    print('No cache')
                 sys.exit()
             elif args == "-U" or args == "--upgrade":
                 subprocess.run(["pip", "install", "--upgrade", "prop-request"])
