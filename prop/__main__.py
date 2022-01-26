@@ -1025,6 +1025,10 @@ This option does not work properly if you delete the files under the {history_di
 
 --clear
 Erase all the contents of the log file ({log_file})
+\033[33mThis option will be removed next update, so please use new option, '--purge-log'\033[0m
+
+--purge-log
+Remove log file
 
 --purge-history
 Remove all histories
@@ -1051,8 +1055,8 @@ Show the directory which caches(stylesheet) were stored
 -U, --upgrade
 Update the prop
 
--p, --parse
-Get HTML from standard input and parse it
+-p, --parse [file path (optional)]
+Get HTML from file or standard input and parse it
 You can use the -s option to specify the search tag, class, and id
 If you specify a URL when you specify this option, an error will occur
 
@@ -1397,10 +1401,17 @@ prop <options> URL [URL...]
                 option.config('check_only', True)
                 option.config('filename', os.getcwd())
             elif args == '-p' or args == '--parse':
-                html = sys.stdin.read()
+                try:
+                    path = arg[n+1]
+                    with open(path, 'r') as f:
+                        html = f.read()
+                    skip += 1
+                except (IndexError, FileNotFoundError):
+                    html = sys.stdin.read()
                 option.config('parse', html)
             elif args == '--clear':
                 option.clear()
+                print("\033[33mProcessing completed successfully, but '--clear' option will be removed next update, so please use new option, '--purge-log'\033[0m")
                 sys.exit()
             elif args == "--config-file":
                 print(setting.config_file)
@@ -1413,6 +1424,13 @@ prop <options> URL [URL...]
                 sys.exit()
             elif args == "--cache-directory":
                 print(cache.root)
+                sys.exit()
+            elif args == "--purge-log":
+                if os.path.isfile(setting.log_file):
+                    os.remove(setting.log_file)
+                    print('done')
+                else:
+                    print('No log file')
                 sys.exit()
             elif args == "--purge-history":
                 if os.path.isdir(history.root):

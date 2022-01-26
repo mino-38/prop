@@ -132,28 +132,36 @@ $ prop -r -f "test-%(num)d.%(ext)s" -o store_ directory URL
 ここに載っているオプションも含めて説明しているので、そちらをご覧ください
 
 # 履歴、ログの保存先
-履歴の保存場所は--history-directory、ログの書き込み先は--log-fileオプションで見ることができます
+履歴の保存場所は--history-directory、ログの書き込み先は--log-fileオプション、キャッシュの保存場所は--cache-directoryで見ることができます
 
 ```bash
 # ログの簡単な見方
 $ cat $(prop --log-file)
 
-履歴一覧
+# 履歴一覧
 $ ls $(prop --history-directory)
+
+# キャッシュの保存場所
+$ prop --cache-directory
 ```
 
-また、--clearオプションでログを全て削除することができます(履歴の削除は手作業でやるかhistoryディレクトリを削除してください)
+また、それぞれを削除するオプションもあります
 
 ```bash
 # ログの消し方
-$ prop --clear
+$ prop --purge-log
 
 # 履歴の削除の仕方
-$ rm -r $(prop --history-directory)
+$ prop --purge-history
+
+# キャッシュの削除
+$ prop --purge-cache
 ```
 
 # 新機能
-- 連番生成についてのバグを修正
+- -p, --parseオプションが標準入力からのみhtmlを受け取る仕様だったのが、ローカルのファイルも読み取れるようにした
+
+- --purge-history, --purge-cacheオプションによって履歴、キャッシュの削除が簡単にできるようにした
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です

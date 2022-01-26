@@ -148,21 +148,27 @@ $ ls $(prop --history-directory)
 $ prop --cache-directory
 ````
 
-You can also delete all logs with the --clear option (delete history and cache by hand or by deleting the history and cache directories)
+You can also delete log file with the --purge-log option
 
 ```bash
-# How to clear the logs
-$ prop --clear
+# Delete log file
+$ prop --purge-log
 
-# How to delete the history
-$ rm -r $(prop --history-directory)
+# Delete histories
+$ prop --purge-history
 
-# How to delete the cache
-$ rm -r $(prop --cache-directory)
+# Delete caches
+$ prop --purge-cache
 ````
 
 # New feature
-- Add restrictions on formats that can be specified with -f and --format options.
+- -p,  --parse options can now specify html not only from standard input but also from local files
+
+```bash
+$ prop -s tags=a,img,script -p FilePath
+```
+
+- You can now remove histories and caches more easily by using --purge-history and --purge-cache options
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).
