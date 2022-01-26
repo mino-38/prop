@@ -1,5 +1,6 @@
 __pycache__/
 prop_request.egg-info/
+.pytest_cache/
 prop-log.log
 build/
 history/
