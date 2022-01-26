@@ -158,6 +158,27 @@ $ prop --purge-history
 $ prop --purge-cache
 ```
 
+#  テスト
+まず、pytestをインストールして下さい
+
+```bash
+$ pip install pytest
+```
+
+インストール済みの人、またはインストールした人はカレントディレクトリを'prop', または'prop/tests'にしてからpytestコマンドを実行してください
+
+```bash
+$ git clone https://github.com/mino-38/prop
+$ cd prop
+$ pytest
+```
+
+テスト中のpropコマンドの出力を見たい場合は、'-s'オプションを付けてpytestを実行してください
+
+```bash
+$ pytest -s
+```
+
 # 新機能
 - -p, --parseオプションが標準入力からのみhtmlを受け取る仕様だったのが、ローカルのファイルも読み取れるようにした
 
