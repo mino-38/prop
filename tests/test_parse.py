@@ -1,6 +1,6 @@
 import subprocess
 import tempfile
-from pprint import pprint as print
+
 def test_parse():
     answer = '<a href="./test1">test</a>\n\n<img src="./test2"/>'
     code = answer+'\n<p>test</p>'
