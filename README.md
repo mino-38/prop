@@ -148,16 +148,16 @@ $ ls $(prop --history-directory)
 $ prop --cache-directory
 ````
 
-You can also delete log file with the --purge-log option
+Also, have the option to remove them
 
 ```bash
-# Delete log file
+# Remove log file
 $ prop --purge-log
 
-# Delete histories
+# Remove histories
 $ prop --purge-history
 
-# Delete caches
+# Remove caches
 $ prop --purge-cache
 ````
 
