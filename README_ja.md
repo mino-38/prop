@@ -145,7 +145,7 @@ $ ls $(prop --history-directory)
 $ prop --cache-directory
 ```
 
-また、それぞれを削除するオプションもあります
+また、これらを削除するオプションもあります
 
 ```bash
 # ログの消し方
