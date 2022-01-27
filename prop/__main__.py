@@ -122,11 +122,7 @@ class setting:
         """
         オプションの設定
         """
-        self.options[key] = value # オプション変更
-
-    def clear(self) -> None:
-        with open(setting.log_file, 'w') as f:
-            f.write('')
+        self.options[key] = value
 
 class cache:
     """
@@ -387,7 +383,7 @@ class parser:
         # ↑リクエストしたURLを取得
         # aタグの参照先に./~~が出てきたときにこの変数の値と連結させる
         if self.option['debug']:
-            self.log(20, 'it be checking robots.txt...  ')
+            self.log(20, 'checking robots.txt...  ')
         try:
             self.robots = Parse(root_url, requests=True, headers=self.option['header'], proxies=self.option['proxy'], timeout=self.option['timeout'])
             is_ok = self.robots.can_crawl
@@ -425,7 +421,7 @@ class parser:
                             if che:
                                 result = os.path.join('styles', os.path.basename(che))
                                 shutil.copy(che, result)
-                                self.log(20, f'Use cache instead of downloading "{target_url}"') 
+                                self.log(20, f'using cache instead of downloading "{target_url}"') 
                             else:
                                 for i in range(self.option['reconnect']+1):
                                     try:
@@ -1023,10 +1019,6 @@ This option does not work properly if you delete the files under the {history_di
 
 -----The following special options-----
 
---clear
-Erase all the contents of the log file ({log_file})
-\033[33mThis option will be removed next update, so please use new option, '--purge-log'\033[0m
-
 --purge-log
 Remove log file
 
@@ -1409,10 +1401,6 @@ prop <options> URL [URL...]
                 except (IndexError, FileNotFoundError):
                     html = sys.stdin.read()
                 option.config('parse', html)
-            elif args == '--clear':
-                option.clear()
-                print("\033[33mProcessing completed successfully, but '--clear' option will be removed next update, so please use new option, '--purge-log'\033[0m")
-                sys.exit()
             elif args == "--config-file":
                 print(setting.config_file)
                 sys.exit()
