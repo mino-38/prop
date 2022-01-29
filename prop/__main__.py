@@ -41,12 +41,6 @@ pip install requests numpy beautifulsoup4 requests[socks] fake-useragent tqdm
 urllib3.disable_warnings(InsecureRequestWarning)
 
 class error:
-    class ArgsError(Exception):
-        pass
-
-    class ConnectError(Exception):
-        pass
-
     @staticmethod
     def print(msg):
         print(f"\033[31m{msg}\033[0m", file=sys.stderr)
@@ -556,9 +550,6 @@ request urls: {0}
                 except gaierror:
                     self.log(20, f"it skiped '{url}' because there was no response from the DNS server")
                     continue
-                except error.ArgsError as e:
-                    tqdm.write(str(e), file=sys.stderr)
-                    sys.exit(1)
                 except Exception as e:
                     if self.option['caperror']:
                         self.log(40, f'\033[31m{str(e)}\033[0m')
@@ -1259,7 +1250,7 @@ prop <options> URL [URL...]
                             break
                     option.config('search', word)
                     option.config('bytes', True)
-                except (error.ArgsError, IndexError):
+                except IndexError:
                     error.print(f"The specifying the argument of the '{args}' option is incorrect")
                 except ValueError:
                     error.print(f'{fl[1]} is not number\nPlease specify number')
