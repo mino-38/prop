@@ -121,6 +121,13 @@ class cache:
     キャッシュ(stylesheet)を扱うクラス
     """
     root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
+    configfile = os.path.join(root, '.cache_info')
+    if os.path.isfile(configfile):
+        with open(configfile, 'r') as f:
+            _caches = json.load(f)
+    else:
+        _caches = dict()
+
     def __init__(self, url, parse):
         self.parse = parse
         host = self.parse.get_hostname(url) 
@@ -141,6 +148,23 @@ class cache:
         file = os.path.join(self.directory, self.parse.get_filename(url))
         with open(file, 'wb') as f:
             f.write(body)
+        cache._caches[url] = file
+
+    @staticmethod
+    def update(option):
+        for url, path in tqdm(cache._caches.items()):
+            r = requests.get(url, timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl'])
+            with open(path, 'wb') as f:
+                f.write(r.content)
+            tqdm.write(f"updated '{path}'")
+            sleep(0.5)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        with open(cache.configfile, 'w') as f:
+            json.dump(self._caches, f)
 
 class history:
     """
@@ -165,7 +189,7 @@ class history:
     def read(self) -> set:
         if os.path.isfile(self.history_file):
             with open(self.history_file, 'r') as f:
-                return set(f.read().rstrip().split('\n'))
+                return set(f.read().rstrip().splitlines())
         else:
             return set()
 
@@ -408,30 +432,31 @@ class parser:
                         before_fmt = self.dl.option['formated']
                         self.dl.option['formated'] = os.path.join('styles', '%(file)s')
                         for from_url, target_url in link_info:
-                            caches = cache(target_url, self)
-                            che = caches.get_cache(target_url)
-                            if che:
-                                result = os.path.join('styles', os.path.basename(che))
-                                shutil.copy(che, result)
-                                self.log(20, f"using cache instead of downloading '{target_url}'") 
-                            else:
-                                for i in range(self.option['reconnect']+1):
-                                    try:
-                                        res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
-                                        if not self.is_success_status(res.status_code):
+                            with cache(target_url, self) as caches:
+                                che = caches.get_cache(target_url)
+                                if che:
+                                    result = os.path.join('styles', os.path.basename(che))
+                                    shutil.copy(che, result)
+                                    self.log(20, f"using cache instead of downloading '{target_url}'") 
+                                else:
+                                    for i in range(self.option['reconnect']+1):
+                                        try:
+                                            res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
+                                            if not self.is_success_status(res.status_code):
+                                                break
+                                            if self.option['debug']:
+                                                self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
+                                            res.close()
+                                            result = self.dl.recursive_download(res.url, res.content)
+                                            caches.save(target_url, res.content)
                                             break
-                                        if self.option['debug']:
-                                            self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
-                                        res.close()
-                                        result = self.dl.recursive_download(res.url, res.content)
-                                        caches.save(target_url, res.content)
-                                        break
-                                    except Exception as e:
-                                        if i >= self.option['reconnect']-1:
-                                            self.log(30, e)
-                                        sleep(1)
-                                        continue
-                            WebSiteData[from_url] = result
+                                        except Exception as e:
+                                            if i >= self.option['reconnect']-1:
+                                                self.log(30, e)
+                                            sleep(1)
+                                            continue
+                                WebSiteData[from_url] = result
+                                caches.end()
                         self.dl.option['formated'] = before_fmt
                     if self.option['progress']:
                         a_info = tqdm(a_data.items(), leave=False, desc="'a tag'")
@@ -592,12 +617,12 @@ request urls: {0}
         output_data: list = []
         self.option['formated']: str = self.option['format'].replace('%(root)s', self.parse.get_hostname(url))
         if self.option['types'] != 'post':
-            r: requests.models.Response = instance(url, params=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], timeout=(self.option['timeout']), proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
+            r: requests.models.Response = instance(url, params=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
         else:
             if self.option['json']:
-                r: requests.models.Response = instance(url, json=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=(self.option['timeout']), headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
+                r: requests.models.Response = instance(url, json=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
             else:
-                r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=(self.option['timeout']), headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
+                r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
         self.init()
         if self.option['debug']:
             self.log(20, 'request... '+'\033[32m'+'done'+'\033[0m'+f'  [{len(r.content)} bytes data] {r.elapsed.total_seconds()}s  ')
@@ -1040,6 +1065,9 @@ Show the directory which caches(stylesheet) were stored
 -U, --upgrade
 Update the prop
 
+--update-caches
+Update downloaded caches
+
 -p, --parse [file path (optional)]
 Get HTML from file or standard input and parse it
 You can use the -s option to specify the search tag, class, and id
@@ -1102,7 +1130,7 @@ def conversion_arg(args: List[str]) -> list:
     for a in args:
         if a.startswith('-') and not a.startswith('--') and 2 < len(a) and not a in {'-np', '-nc', '-nb', '-nE', '-ns', '-nd', '-dx', '-st'}:
             results: str = '-'+'\n-'.join(a[1:])
-            result.extend(results.split('\n'))
+            result.extend(results.splitlines())
         else:
             result.append(a)
     return result
@@ -1438,6 +1466,9 @@ prop <options> URL [URL...]
 
 def main() -> None:
     url, log_file, option = argument()
+    if '--update-caches' in sys.argv:
+        cache.update(option)
+        sys.exit()
     for index, link in enumerate(url):
         if link == '-':
             link = sys.stdin.readline().rstrip()
