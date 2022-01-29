@@ -22,8 +22,6 @@ import requests
 from bs4 import BeautifulSoup as bs
 from fake_useragent import FakeUserAgentError, UserAgent
 from requests.auth import HTTPBasicAuth
-from requests.exceptions import (ConnectionError, ConnectTimeout,
-                                 MissingSchema, ReadTimeout)
 from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from robotsparsetools import NotFoundError, Parse
@@ -561,8 +559,10 @@ request urls: {0}
                 except error.ArgsError as e:
                     tqdm.write(str(e), file=sys.stderr)
                     sys.exit(1)
-                except (MissingSchema, ConnectionError):
-                    raise error.ConnectError(f"Failed to connect to '{url}'")
+                except Exception as e:
+                    if self.option['caperror']:
+                        self.log(40, f'\033[31m{str(e)}\033[0m')
+                    continue
                 if self.option['recursive'] or self.option['check_only']:
                     pass
                 elif isinstance(result, list):
@@ -580,8 +580,10 @@ request urls: {0}
                     result = self.request(url, instance)
                 except gaierror:
                     continue
-                except (MissingSchema, ConnectionError):
-                    raise error.ConnectError(f"Failed to connect to '{url}'")
+                except Exception as e:
+                    if self.option['caperror']:
+                        self.log(40, f'\033[31m{str(e)}\033[0m')
+                    continue
                 if self.option['recursive'] or self.option['check_only']:
                     pass
                 elif isinstance(result, list):
@@ -1453,40 +1455,20 @@ def main() -> None:
         if url != [] and not (isinstance(option, dict) and option['parse']):
             if isinstance(option, list):
                 dl: downloader = downloader(url[0], option[0], option[0]['parser'])
-                start(dl)
+                dl.start()
                 for u, o in zip(url[1:], option[1:]):
                     dl.url = u
                     dl.option = o
                     dl.parse.option = o
-                    start(dl)
+                    dl.start()
             else:
                 dl: downloader = downloader(url, option, option['parser'])
-                start(dl)
+                dl.start()
         elif option['parse']:
             dl: downloader = downloader(url, option, option['parser'])
             print(dl.parse.html_extraction(option['parse'], option['search']))
         elif url == []:
             error.print('Missing value for URL\nPlease specify URL')
-
-def start(dl):
-    if dl.option['caperror']:
-        try:
-            dl.start()
-        except ConnectTimeout:
-            dl.log(40, "didn't connect")
-            dl.log(40, f"Connection Error\n'{url}'")
-        except ReadTimeout:
-            dl.log(40, 'timeouted')
-            dl.log(40, f"Timed out while downloading '{url}'")
-        except error.ConnectError as e:
-            dl.log(40, e)
-        except Exception as e:
-            dl.log(40, e)
-    else:
-        try:
-            dl.start()
-        except:
-            pass
 
 if __name__ == '__main__':
     main()
