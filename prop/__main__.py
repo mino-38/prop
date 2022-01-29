@@ -137,9 +137,9 @@ class cache:
         else:
             return None
 
-    def save(self, url, body: str) -> str:
+    def save(self, url, body: bytes) -> str:
         file = os.path.join(self.directory, self.parse.get_filename(url))
-        with open(file, 'w') as f:
+        with open(file, 'wb') as f:
             f.write(body)
 
 class history:
@@ -274,7 +274,7 @@ class parser:
         start = self.option['start'] is None
         for tag in list:
             if isinstance(get, str):
-                url: str = self.delete_query(tag.get(get))
+                url: str = tag.get(get)
             else:
                 for g in get:
                     url = tag.get(g)
@@ -282,14 +282,14 @@ class parser:
                         break
                 else:
                     continue
-                url = self.delete_query(url)
+                url = url
             if not url or '#' in url:
                 continue
             if self.is_url(url):
-                target_url: str = self.delete_query(url)
+                target_url: str = url
                 dns = True
             else:
-                target_url: str = self.delete_query(urljoin(cwd_url, url))
+                target_url: str = urljoin(cwd_url, url)
                 if not self.is_url(target_url):
                     continue
             if cut and not start:
@@ -313,10 +313,10 @@ class parser:
                         if not hostname:
                             raise gaierror()
                         if self.option['debug']:
-                            self.log(20, f"it be querying the DNS server for '{hostname}' now...")
+                            self.log(20, f"querying the DNS server for '{hostname}' now...")
                         i = self.query_dns(hostname)
                 except gaierror:
-                    self.log(30, f"it skiped {target_url} because there was no response from the DNS server")
+                    self.log(30, f"skiped {target_url} because there was no response from the DNS server")
                     continue
                 except:
                     pass
@@ -413,7 +413,7 @@ class parser:
                             if che:
                                 result = os.path.join('styles', os.path.basename(che))
                                 shutil.copy(che, result)
-                                self.log(20, f'using cache instead of downloading "{target_url}"') 
+                                self.log(20, f"using cache instead of downloading '{target_url}'") 
                             else:
                                 for i in range(self.option['reconnect']+1):
                                     try:
@@ -423,8 +423,8 @@ class parser:
                                         if self.option['debug']:
                                             self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
                                         res.close()
-                                        result = self.dl.recursive_download(res.url, res.text)
-                                        caches.save(target_url, res.text)
+                                        result = self.dl.recursive_download(res.url, res.content)
+                                        caches.save(target_url, res.content)
                                         break
                                     except Exception as e:
                                         if i >= self.option['reconnect']-1:
@@ -452,7 +452,7 @@ class parser:
                                 else:
                                     if not self.is_success_status(res.status_code):
                                         break
-                                    result = self.dl.recursive_download(res.url, res.text, count)
+                                    result = self.dl.recursive_download(res.url, res.content, count)
                                     count += 1
                                     WebSiteData[from_url] = result
                                 break
@@ -703,7 +703,7 @@ request urls: {0}
         """
         HTMLから見つかったファイルをダウンロード
         """
-        exts: Tuple[str, str] = self.parse.splitext(url)
+        exts: Tuple[str, str] = self.parse.splitext(self.parse.delete_query(url))
         # フォーマットを元に保存ファイル名を決める
         save_filename: str = self.option['formated'].replace('%(file)s', ''.join(self.parse.splitext(self.parse.get_filename(url)))).replace('%(num)d', str(number)).replace('%(ext)s', exts[1].lstrip('.'))
         if os.path.isfile(save_filename) and not self.ask_continue(f'{save_filename} has already existed\nCan I overwrite?'):
