@@ -1079,7 +1079,7 @@ Update the prop
 
 --update-caches
 Update downloaded caches
-And, if you use this option in the directory that 'styles' directory exist, files in the 'styles' directory will be also updated
+And, if you use this option in the directory that 'styles' directory exists, files in the 'styles' directory will be also updated
 
 -p, --parse [file path (optional)]
 Get HTML from file or standard input and parse it
