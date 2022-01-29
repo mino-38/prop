@@ -139,7 +139,7 @@ class cache:
 
     @staticmethod
     def get_cache(url) -> str or None:
-        return cache._caches.get(path)
+        return cache._caches.get(url)
 
     def save(self, url, body: bytes) -> str:
         file = os.path.join(self.directory, self.parse.get_filename(url))
@@ -155,6 +155,8 @@ class cache:
                 info_dict = json.load(f)
         else:
             info_dict = dict()
+        if not cache._caches:
+            return
         for url, path in tqdm(cache._caches.items()):
             r = requests.get(url, timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl'])
             with open(path, 'wb') as f:
@@ -1077,7 +1079,7 @@ Show the directory which caches(stylesheet) were stored
 -U, --upgrade
 Update the prop
 
---update-caches
+--update-cache
 Update downloaded caches
 And, if you use this option in the directory that 'styles' directory exists, files in the 'styles' directory will be also updated
 
@@ -1362,7 +1364,7 @@ prop <options> URL [URL...]
                     error.print(f"{args} [StartName]\nPlease specify value of '{args}'")
             elif args == '-np' or args == '--no-parent':
                 option.config('noparent', True)
-            elif args in {'-nc', '-nb', '--no-content', '--no-body'}:
+            elif args in {'-nc', '-nb', '--no-content', '--no-body', '--update-cache'}:
                 continue
             elif args == '-M' or args == '--limit':
                 try:
@@ -1479,7 +1481,7 @@ prop <options> URL [URL...]
 
 def main() -> None:
     url, log_file, option = argument()
-    if '--update-caches' in sys.argv:
+    if '--update-cache' in sys.argv:
         cache.update(option if isinstance(option, dict) else setting.options)
         sys.exit()
     for index, link in enumerate(url):
