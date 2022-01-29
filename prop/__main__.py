@@ -137,12 +137,9 @@ class cache:
         if not os.path.isdir(self.directory):
             os.mkdir(self.directory)
 
-    def get_cache(self, path) -> str or None:
-        file = os.path.join(self.directory, self.parse.get_filename(path))
-        if os.path.isfile(file):
-            return file
-        else:
-            return None
+    @staticmethod
+    def get_cache(url) -> str or None:
+        return cache._caches.get(path)
 
     def save(self, url, body: bytes) -> str:
         file = os.path.join(self.directory, self.parse.get_filename(url))
@@ -155,14 +152,17 @@ class cache:
         file = os.path.join('styles', '.prop_info.json')
         if os.path.isfile(file):
             with open(file, 'r') as f:
-                links = {k: v for k, v in json.load(f).items() if parser.delete_query(k).endswith('.css')}
+                info_dict = json.load(f)
         else:
-            links = cache._caches
-        for url, path in tqdm(links.items()):
+            info_dict = dict()
+        for url, path in tqdm(cache._caches.items()):
             r = requests.get(url, timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl'])
             with open(path, 'wb') as f:
                 f.write(r.content)
             tqdm.write(f"updated '{path}'")
+            if url in info_dict:
+                shutil.copy(path, info_dict[url])
+                tqdm.write(f"updated '{info_dict[url]}'")
             sleep(0.5)
 
     def __enter__(self):
@@ -1079,6 +1079,7 @@ Update the prop
 
 --update-caches
 Update downloaded caches
+And, if you use this option in the directory that 'styles' directory exist, files in the 'styles' directory will be updated
 
 -p, --parse [file path (optional)]
 Get HTML from file or standard input and parse it
@@ -1479,7 +1480,7 @@ prop <options> URL [URL...]
 def main() -> None:
     url, log_file, option = argument()
     if '--update-caches' in sys.argv:
-        cache.update(option)
+        cache.update(option if isinstance(option, dict) else setting.options)
         sys.exit()
     for index, link in enumerate(url):
         if link == '-':
