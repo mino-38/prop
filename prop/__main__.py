@@ -152,7 +152,13 @@ class cache:
 
     @staticmethod
     def update(option):
-        for url, path in tqdm(cache._caches.items()):
+        file = os.path.join('styles', '.prop_info.json')
+        if os.path.isfile(file):
+            with open(file, 'r') as f:
+                links = {k: v for k, v in json.load(f).items() if parser.delete_query(k).endswith('.css')}
+        else:
+            links = cache._caches
+        for url, path in tqdm(links.items()):
             r = requests.get(url, timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl'])
             with open(path, 'wb') as f:
                 f.write(r.content)
@@ -205,19 +211,21 @@ class parser:
         self.parser = self.option['parser']
         self.dl = dl
 
-    def get_rootdir(self, url: str) -> str or None:
+    @staticmethod
+    def get_rootdir(url: str) -> str or None:
         """
         ホームアドレスを摘出
         """
-        if self.is_url(url):
+        if parser.is_url(url):
             result = urlparse(url)
             return result.scheme+'://'+result.hostname
         else:
             return None
 
-    def query_dns(self, url: str):
-        if self.is_url(url):
-            host = self.get_hostname(url)
+    @staticmethod
+    def query_dns(url: str):
+        if parser.is_url(url):
+            host = parser.get_hostname(url)
         else:
             host = url
         if host:
@@ -226,22 +234,25 @@ class parser:
         else:
             raise gaierror()
 
-    def get_hostname(self, url: str) -> str or None:
-        if self.is_url(url):
+    @staticmethod
+    def get_hostname(url: str) -> str or None:
+        if parser.is_url(url):
             return urlparse(url).hostname
         else:
             return None
 
-    def get_filename(self, url, name_only=True):
+    @staticmethod
+    def get_filename(url, name_only=True):
         if not isinstance(url, str):
             return url
         result = unquote(url.rstrip('/').split('/')[-1])
         if name_only:
             defrag = urldefrag(result).url
-            return self.delete_query(defrag)
+            return parser.delete_query(defrag)
         return result
 
-    def splitext(self, url):
+    @staticmethod
+    def splitext(url):
         if not isinstance(url, str):
             return url
         split = url.rstrip('/').split('.')
@@ -250,7 +261,8 @@ class parser:
         else:
             return ('.'.join(split[:-1]), '.'+split[-1])
 
-    def delete_query(self, url):
+    @staticmethod
+    def delete_query(url):
         if not isinstance(url, str):
             return url
         index = url.find('?')
@@ -259,7 +271,8 @@ class parser:
         else:
             return url
 
-    def is_url(self, url: str) -> bool:
+    @staticmethod
+    def is_url(url: str) -> bool:
         """
         引数に渡された文字列がURLか判別
         """
@@ -456,7 +469,6 @@ class parser:
                                             sleep(1)
                                             continue
                                 WebSiteData[from_url] = result
-                                caches.end()
                         self.dl.option['formated'] = before_fmt
                     if self.option['progress']:
                         a_info = tqdm(a_data.items(), leave=False, desc="'a tag'")
