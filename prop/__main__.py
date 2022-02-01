@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 import glob
-import datetime
 import json
 import logging
 import math
@@ -10,11 +9,9 @@ import re
 import shutil
 import socket
 import subprocess
-import tempfile
 import sys
 from multiprocessing import Process
 from random import uniform
-from dataclasses import dataclass
 from socket import gaierror
 from time import sleep
 from typing import Any, Dict, List, Tuple
@@ -49,15 +46,6 @@ class error:
         print(f"\033[31m{msg}\033[0m", file=sys.stderr)
         print("\n\033[33mIf you don't know how to use, please use '-h', '--help' options and you will see help message\033[0m", file=sys.stderr)
         sys.exit(1)
-
-@dataclass
-class ResponseResult:
-    text: str
-    content: bytes
-    headers: dict
-    status_code: int
-    url: str
-    elapsed: datetime.timedelta
 
 class LoggingHandler(logging.StreamHandler):
     color = {'INFO': '\033[36mINFO\033[0m', 'WARNING': '\033[33mWARNING\033[0m', 'WARN': '\033[33mWARN\033[0m', 'ERROR': '\033[31mERROR\033[0m'}
@@ -99,7 +87,7 @@ class setting:
     def __init__(self):
         # 設定できるオプションたち
         # 他からimportしてもこの辞書を弄ることで色々できる
-        self.options: Dict[str, bool or str or None] = {'limit': 0, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'progress': True, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/1.1.2'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
+        self.options: Dict[str, bool or str or None] = {'limit': 0, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/1.1.2'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
@@ -856,6 +844,7 @@ Ignore SSL certificate validation
 
 -n, --no-progress
 Do not show progress
+\033[33mThis options will be removed next update\033[0m
 
 -d, --data param1=value1 param2=value2 
 Specify the data and parameters to send
@@ -1076,7 +1065,6 @@ The options that can be changed are as follows
     "types": "get",
     "timeout": [3.0, 60.0],
     "redirect": true,
-    "progress": true,
     "search": false,
     "header": null,
     "cookie": null,
@@ -1194,7 +1182,7 @@ prop <options> URL [URL...]
             elif args == '-S' or args == '--ignore-SSL':
                 option.config('ssl', False)
             elif args == '-n' or args == '--no-progress':
-                option.config('progress', False)
+                print("'-n', '--no-progress' options will be removed next update")
             elif args == '-a' or args == '--fake-user-agent':
                 try:
                     _stderr = sys.stderr

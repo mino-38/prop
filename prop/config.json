@@ -2,7 +2,6 @@
     "types": "get",
     "timeout": [3.0, 60.0],
     "redirect": true,
-    "progress": true,
     "search": false,
     "header": {
         "User-Agent": "Prop/1.0.0"
