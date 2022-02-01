@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import glob
+import datetime
 import json
 import logging
 import math
@@ -9,9 +10,11 @@ import re
 import shutil
 import socket
 import subprocess
+import tempfile
 import sys
 from multiprocessing import Process
 from random import uniform
+from dataclasses import dataclass
 from socket import gaierror
 from time import sleep
 from typing import Any, Dict, List, Tuple
@@ -47,7 +50,16 @@ class error:
         print("\n\033[33mIf you don't know how to use, please use '-h', '--help' options and you will see help message\033[0m", file=sys.stderr)
         sys.exit(1)
 
-class LoggingHandler(logging.Handler):
+@dataclass
+class ResponseResult:
+    text: str
+    content: bytes
+    headers: dict
+    status_code: int
+    url: str
+    elapsed: datetime.timedelta
+
+class LoggingHandler(logging.StreamHandler):
     color = {'INFO': '\033[36mINFO\033[0m', 'WARNING': '\033[33mWARNING\033[0m', 'WARN': '\033[33mWARN\033[0m', 'ERROR': '\033[31mERROR\033[0m'}
     def __init__(self, level=logging.NOTSET):
         super().__init__(level)
@@ -414,19 +426,17 @@ class parser:
         # ↑リクエストしたURLを取得
         # aタグの参照先に./~~が出てきたときにこの変数の値と連結させる
         if self.option['debug']:
-            self.log(20, 'checking robots.txt...  ')
+            self.log(20, 'checking robots.txt...')
         try:
             self.robots = Parse(root_url, requests=True, headers=self.option['header'], proxies=self.option['proxy'], timeout=self.option['timeout'])
             is_ok = self.robots.can_crawl
             self.delay_check()
-            if self.option['debug']:
-                print('\033[1A\033[60G  '+'\033[32m'+'done'+'\033[0m')
         except NotFoundError:
             is_ok = lambda *_: True
             if self.option['debug']:
                 self.log(20, 'robots.txt was none')
         source: List[bytes] = [response.content]
-        print(f"histories are saved in '{h.history_file}'", file=sys.stderr)
+        print(f"\033[36mhistories are saved in '{h.history_file}'\033[0m", file=sys.stderr)
         for n in range(self.option['recursive']):
             for source, cwd_url in zip(source, cwd_urls):
                 datas = bs(source, self.parser)
@@ -440,13 +450,9 @@ class parser:
                     if not os.path.isdir('styles') and not self.option['check_only']:
                         os.mkdir('styles')
                         self.log(20, 'loading stylesheets...')
-                        if self.option['progress']:
-                            link_info = tqdm(link_data.items(), leave=False, desc="'stylesheets'")
-                        else:
-                            link_info = link_data.items()
                         before_fmt = self.dl.option['formated']
                         self.dl.option['formated'] = os.path.join('styles', '%(file)s')
-                        for from_url, target_url in link_info:
+                        for from_url, target_url in tqdm(link_data.items(), leave=False, desc="'stylesheets'"):
                             with cache(target_url, self) as caches:
                                 che = caches.get_cache(target_url)
                                 if che:
@@ -472,11 +478,7 @@ class parser:
                                             continue
                                 WebSiteData[from_url] = result
                         self.dl.option['formated'] = before_fmt
-                    if self.option['progress']:
-                        a_info = tqdm(a_data.items(), leave=False, desc="'a tag'")
-                    else:
-                        a_info = a_data.items()
-                    for from_url, target_url in a_info:
+                    for from_url, target_url in tqdm(a_data.items(), leave=False, desc="'a tag'"):
                         for i in range(self.option['reconnect']+1):
                             try:
                                 res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
@@ -506,11 +508,7 @@ class parser:
                             continue
                         sleep(round(uniform(self.option['interval'], max), 1))
                 if self.option['content']:
-                    if self.option['progress']:
-                        img_info = tqdm(img_data.items(), leave=False, desc="'img tag'")
-                    else:
-                        img_info = img_data.items()
-                    for from_url, target_url in img_info:
+                    for from_url, target_url in tqdm(img_data.items(), leave=False, desc="'img tag'"):
                         for i in range(self.option['reconnect']):
                             try:
                                 res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
@@ -573,53 +571,28 @@ class downloader:
         if self.option['debug']:
             self.log(20, """
 request urls: {0}
+\033[35m[settings]\033[0m
 {1}
             """.format(self.url, '\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in self.option.items()])))
-        if self.option['progress'] and not self.option['recursive']:
-            for url in tqdm(self.url):
-                try:
-                    hostname = self.parse.get_hostname(url)
-                    if not hostname:
-                        self.log(40, f"'{url}' is not url")
-                        continue
-                    self.log(20, f"it be querying the DNS server for '{hostname}' now...")
-                    i = self.parse.query_dns(hostname)
+        for url in self.url:
+            try:
+                hostname = self.parse.get_hostname(url)
+                if not hostname:
+                    self.log(40, f"'{url}' is not url")
+                    continue
+                if self.option['debug']:
+                    self.log(20, f"querying the DNS server for '{hostname}' now...")
+                i = self.parse.query_dns(hostname)
+                if self.option['debug']:
                     self.log(20, f"request start {url} [{i[0][-1][0]}]")
-                    result = self.request(url, instance)
-                except gaierror:
-                    self.log(20, f"it skiped '{url}' because there was no response from the DNS server")
-                    continue
-                except Exception as e:
-                    if self.option['caperror']:
-                        self.log(40, f'\033[31m{str(e)}\033[0m')
-                    continue
-                if self.option['recursive'] or self.option['check_only']:
-                    pass
-                elif isinstance(result, list):
-                    self._stdout(*result)
-                else:
-                    self._stdout(result)
-        else:
-            for url in self.url:
-                try:
-                    hostname = self.parse.get_hostname(url)
-                    if not hostname:
-                        self.log(40, f"'{url}' is not url")
-                        continue
-                    i = self.parse.query_dns(hostname)
-                    result = self.request(url, instance)
-                except gaierror:
-                    continue
-                except Exception as e:
-                    if self.option['caperror']:
-                        self.log(40, f'\033[31m{str(e)}\033[0m')
-                    continue
-                if self.option['recursive'] or self.option['check_only']:
-                    pass
-                elif isinstance(result, list):
-                    self._stdout(*result)
-                else:
-                    self._stdout(result)
+                self.request(url, instance)
+            except gaierror:
+                self.log(20, f"skiped '{url}' because there was no response from the DNS server")
+                continue
+            except Exception as e:
+                if self.option['caperror']:
+                    self.log(40, f'\033[31m{str(e)}\033[0m')
+                continue
 
     def init(self):
         self.option['payload'] = None
@@ -628,24 +601,21 @@ request urls: {0}
         self.option['upload'] = None
 
     def request(self, url: str, instance) -> str or List[requests.models.Response, str]:
-        output_data: list = []
         self.option['formated']: str = self.option['format'].replace('%(root)s', self.parse.get_hostname(url))
         if self.option['types'] != 'post':
-            r: requests.models.Response = instance(url, params=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
+            r: requests.models.Response = instance(url, params=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'], stream=True)
         else:
             if self.option['json']:
-                r: requests.models.Response = instance(url, json=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
+                r: requests.models.Response = instance(url, json=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}), stream=True)
             else:
-                r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
+                r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}), stream=True)
         self.init()
-        if self.option['debug']:
-            self.log(20, 'request... '+'\033[32m'+'done'+'\033[0m'+f'  [{len(r.content)} bytes data] {r.elapsed.total_seconds()}s  ')
-            if not self.option['info']:
-                tqdm.write(f'\n\033[35m[response headers]\033[0m\n\n'+'\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
+        if self.option['debug'] and not self.option['info']:
+            print(f'\n\033[35m[response headers]\033[0m\n\n'+'\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
         if not self.parse.is_success_status(r.status_code):
             return
         if self.option['check_only'] and not self.option['recursive']:
-            tqdm.write(f'{url}  ... \033[32mExists\033[0m')
+            print(f'{url}  ... \033[32mExists\033[0m')
             return
         h = history(r.url)
         if self.option['recursive']:
@@ -666,64 +636,56 @@ request urls: {0}
                 self.log(40, 'the output destination is not a directory or not set')
                 sys.exit(1)
         elif self.option['info']:
-            res: requests.structures.CaseInsensitiveDict = r.headers
-        elif self.option['bytes'] and not self.option['search']:
-            res: bytes = r.content
-        else:
-            res: str = r.text
-        if self.option['search']:
-            res: str = self.parse.html_extraction(res, self.option['search'])
-        if self.option['output']:
-            output_data.append(res)
-        else:
-            mode = 'wb'
-            if self.option['filename'] is not os.path.basename:
-                save_name: str = self.option['filename']
-                if os.path.isdir(self.option['filename']):
-                    save_name: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url)+(self.parse.splitext(r.url)[1]))
-                if isinstance(res, str):
-                    mode = 'w'
-                with open(save_name, mode) as f:
-                    f.write(res)
+            self._stdout(r, [r.headers])
+            return
+        elif self.option['search']:
+            print(self.parse.html_extraction(r.text, self.option['search']))
+            return
+        length = r.headers.get('content-length')
+        if length:
+            if self.option['filename']:
+                if self.option['filename'] is os.path.basename:
+                    save_filename = self.parse.get_filename(r.url)
+                elif os.path.isdir(self.option['filename']):
+                    save_filename: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url))
+                else:
+                    save_filename: str = self.option['filename']
+                with open(save_filename, 'wb' if self.option['bytes'] else 'w') as f:
+                    self.save(f.write, length, r)
             else:
-                save_name: str = self.option['formated'].replace('%(file)s', self.parse.get_filename(r.url))
-                if isinstance(res, str):
-                    mode = 'w'
-                with open(save_name, mode) as f:
-                    f.write(res)
-            h.write(url.rstrip('/'))
-            if self.option['progress']:
-                self.log(20, 'Success Download\n')
-            return save_name
-        if self.option['output']:
-            return [r, output_data]
+                self.save(tqdm.write, length, r)
+        else:
+            print(r.content if self.option['bytes'] else r.text)  
+
+    def save(self, output, length, r):
+        with tqdm(total=int(length), unit="B", unit_scale=True, leave=False) as p:
+            for b in r.iter_content(chunk_size=16384):
+                output(b.decode(errors='backslashreplace') if output == tqdm.write else b)
+                p.update(len(b))
 
     def _stdout(self, response, output='') -> None:
-        if isinstance(response, str):
-            tqdm.write(response)
-        elif self.option['info'] and response:
-            tqdm.write('\n\033[35m[histories of redirect]\033[0m\n')
-            if not response.history:
-                tqdm.write('-')
-            else:
-                for h in response.history:
-                    tqdm.write(h.url)
-                    tqdm.write('↓')
-                tqdm.write(response.url)
-            tqdm.write('\033[35m[cookies]\033[0m\n')
-            if not response.cookies:
-                tqdm.write('-')
-            else:
-                for c in response.cookies:
-                    tqdm.write(f'\033[34m{c.name}\033[0m: {c.value}')
-            tqdm.write('\n\033[35m[response headers]\033[0m\n')
+        tqdm.write('\n\033[35m[histories of redirect]\033[0m\n')
+        if not response.history:
+            tqdm.write('-')
+        else:
+            for h in response.history:
+                tqdm.write(h.url)
+                tqdm.write('↓')
+            tqdm.write(response.url)
+        tqdm.write('\033[35m[cookies]\033[0m\n')
+        if not response.cookies:
+            tqdm.write('-')
+        else:
+            for c in response.cookies:
+                tqdm.write(f'\033[34m{c.name}\033[0m: {c.value}')
+        tqdm.write('\n\033[35m[response headers]\033[0m\n')
         for i in output:
             if isinstance(i, (str, bytes)):
                 tqdm.write(str(i), end='')
             else:
                 for k, v  in i.items():
                     tqdm.write(f'\033[34m{k}\033[0m: {v}')
-        sys.stdout.flush()
+    sys.stdout.flush()
 
     def _split_list(self, array, N):
         n = math.ceil(len(array) / N)
