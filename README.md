@@ -183,12 +183,6 @@ $ pytest -s
 ```
 
 # New feature
-- -p,  --parse options can now specify html not only from standard input but also from local files
-
-```bash
-$ prop -s tags=a,img,script -p FilePath
-```
-
 - You can update caches by using --update-cache option
 - Show the progress during downloading
 
