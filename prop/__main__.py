@@ -630,20 +630,21 @@ request urls: {0}
             print(self.parse.html_extraction(r.text, self.option['search']))
             return
         length = r.headers.get('content-length')
-        if length:
-            if self.option['filename']:
-                if self.option['filename'] is os.path.basename:
-                    save_filename = self.parse.get_filename(r.url)
-                elif os.path.isdir(self.option['filename']):
-                    save_filename: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url))
-                else:
-                    save_filename: str = self.option['filename']
+        if self.option['filename']:
+            if self.option['filename'] is os.path.basename:
+                save_filename = self.parse.get_filename(r.url)
+            elif os.path.isdir(self.option['filename']):
+                save_filename: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url))
+            else:
+                save_filename: str = self.option['filename']
+            if length:
                 with open(save_filename, 'wb' if self.option['bytes'] else 'w') as f:
                     self.save(f.write, length, r)
             else:
-                self.save(tqdm.write, length, r)
+                with open(save_filename, 'wb' if self.option['bytes'] else 'w') as f:
+                    f.write(r.content if self.option['bytes'] else r.text)
         else:
-            print(r.content if self.option['bytes'] else r.text)  
+            self.save(tqdm.write, length, r)
 
     def save(self, output, length, r):
         with tqdm(total=int(length), unit="B", unit_scale=True, leave=False) as p:
