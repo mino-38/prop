@@ -189,7 +189,8 @@ $ pytest -s
 $ prop -s tags=a,img,script -p FilePath
 ```
 
-- You can now remove histories and caches more easily by using --purge-history and --purge-cache options
+- You can update caches by using --update-cache option
+- Show the progress during downloading
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).
