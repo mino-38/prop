@@ -22,8 +22,6 @@ import requests
 from bs4 import BeautifulSoup as bs
 from fake_useragent import FakeUserAgentError, UserAgent
 from requests.auth import HTTPBasicAuth
-from requests.exceptions import (ConnectionError, ConnectTimeout,
-                                 MissingSchema, ReadTimeout)
 from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
 from robotsparsetools import NotFoundError, Parse
@@ -43,19 +41,13 @@ pip install requests numpy beautifulsoup4 requests[socks] fake-useragent tqdm
 urllib3.disable_warnings(InsecureRequestWarning)
 
 class error:
-    class ArgsError(Exception):
-        pass
-
-    class ConnectError(Exception):
-        pass
-
     @staticmethod
     def print(msg):
         print(f"\033[31m{msg}\033[0m", file=sys.stderr)
         print("\n\033[33mIf you don't know how to use, please use '-h', '--help' options and you will see help message\033[0m", file=sys.stderr)
         sys.exit(1)
 
-class LoggingHandler(logging.Handler):
+class LoggingHandler(logging.StreamHandler):
     color = {'INFO': '\033[36mINFO\033[0m', 'WARNING': '\033[33mWARNING\033[0m', 'WARN': '\033[33mWARN\033[0m', 'ERROR': '\033[31mERROR\033[0m'}
     def __init__(self, level=logging.NOTSET):
         super().__init__(level)
@@ -95,7 +87,7 @@ class setting:
     def __init__(self):
         # 設定できるオプションたち
         # 他からimportしてもこの辞書を弄ることで色々できる
-        self.options: Dict[str, bool or str or None] = {'limit': 0, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'progress': True, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/1.1.2'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
+        self.options: Dict[str, bool or str or None] = {'limit': 0, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/1.1.2'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
@@ -122,17 +114,20 @@ class setting:
         """
         オプションの設定
         """
-        self.options[key] = value # オプション変更
-
-    def clear(self) -> None:
-        with open(setting.log_file, 'w') as f:
-            f.write('')
+        self.options[key] = value
 
 class cache:
     """
     キャッシュ(stylesheet)を扱うクラス
     """
     root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
+    configfile = os.path.join(root, '.cache_info')
+    if os.path.isfile(configfile):
+        with open(configfile, 'r') as f:
+            _caches = json.load(f)
+    else:
+        _caches = dict()
+
     def __init__(self, url, parse):
         self.parse = parse
         host = self.parse.get_hostname(url) 
@@ -142,17 +137,42 @@ class cache:
         if not os.path.isdir(self.directory):
             os.mkdir(self.directory)
 
-    def get_cache(self, path) -> str or None:
-        file = os.path.join(self.directory, self.parse.get_filename(path))
-        if os.path.isfile(file):
-            return file
-        else:
-            return None
+    @staticmethod
+    def get_cache(url) -> str or None:
+        return cache._caches.get(url)
 
-    def save(self, url, body: str) -> str:
+    def save(self, url, body: bytes) -> str:
         file = os.path.join(self.directory, self.parse.get_filename(url))
-        with open(file, 'w') as f:
+        with open(file, 'wb') as f:
             f.write(body)
+        cache._caches[url] = file
+
+    @staticmethod
+    def update(option):
+        file = os.path.join('styles', '.prop_info.json')
+        if os.path.isfile(file):
+            with open(file, 'r') as f:
+                info_dict = json.load(f)
+        else:
+            info_dict = dict()
+        if not cache._caches:
+            return
+        for url, path in tqdm(cache._caches.items()):
+            r = requests.get(url, timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl'])
+            with open(path, 'wb') as f:
+                f.write(r.content)
+            tqdm.write(f"updated '{path}'")
+            if url in info_dict:
+                shutil.copy(path, info_dict[url])
+                tqdm.write(f"updated '{info_dict[url]}'")
+            sleep(0.5)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        with open(cache.configfile, 'w') as f:
+            json.dump(self._caches, f)
 
 class history:
     """
@@ -177,7 +197,7 @@ class history:
     def read(self) -> set:
         if os.path.isfile(self.history_file):
             with open(self.history_file, 'r') as f:
-                return set(f.read().rstrip().split('\n'))
+                return set(f.read().rstrip().splitlines())
         else:
             return set()
 
@@ -193,19 +213,21 @@ class parser:
         self.parser = self.option['parser']
         self.dl = dl
 
-    def get_rootdir(self, url: str) -> str or None:
+    @staticmethod
+    def get_rootdir(url: str) -> str or None:
         """
         ホームアドレスを摘出
         """
-        if self.is_url(url):
+        if parser.is_url(url):
             result = urlparse(url)
             return result.scheme+'://'+result.hostname
         else:
             return None
 
-    def query_dns(self, url: str):
-        if self.is_url(url):
-            host = self.get_hostname(url)
+    @staticmethod
+    def query_dns(url: str):
+        if parser.is_url(url):
+            host = parser.get_hostname(url)
         else:
             host = url
         if host:
@@ -214,22 +236,25 @@ class parser:
         else:
             raise gaierror()
 
-    def get_hostname(self, url: str) -> str or None:
-        if self.is_url(url):
+    @staticmethod
+    def get_hostname(url: str) -> str or None:
+        if parser.is_url(url):
             return urlparse(url).hostname
         else:
             return None
 
-    def get_filename(self, url, name_only=True):
+    @staticmethod
+    def get_filename(url, name_only=True):
         if not isinstance(url, str):
             return url
         result = unquote(url.rstrip('/').split('/')[-1])
         if name_only:
             defrag = urldefrag(result).url
-            return self.delete_query(defrag)
+            return parser.delete_query(defrag)
         return result
 
-    def splitext(self, url):
+    @staticmethod
+    def splitext(url):
         if not isinstance(url, str):
             return url
         split = url.rstrip('/').split('.')
@@ -238,7 +263,8 @@ class parser:
         else:
             return ('.'.join(split[:-1]), '.'+split[-1])
 
-    def delete_query(self, url):
+    @staticmethod
+    def delete_query(url):
         if not isinstance(url, str):
             return url
         index = url.find('?')
@@ -247,7 +273,8 @@ class parser:
         else:
             return url
 
-    def is_url(self, url: str) -> bool:
+    @staticmethod
+    def is_url(url: str) -> bool:
         """
         引数に渡された文字列がURLか判別
         """
@@ -286,7 +313,7 @@ class parser:
         start = self.option['start'] is None
         for tag in list:
             if isinstance(get, str):
-                url: str = self.delete_query(tag.get(get))
+                url: str = tag.get(get)
             else:
                 for g in get:
                     url = tag.get(g)
@@ -294,14 +321,14 @@ class parser:
                         break
                 else:
                     continue
-                url = self.delete_query(url)
+                url = url
             if not url or '#' in url:
                 continue
             if self.is_url(url):
-                target_url: str = self.delete_query(url)
+                target_url: str = url
                 dns = True
             else:
-                target_url: str = self.delete_query(urljoin(cwd_url, url))
+                target_url: str = urljoin(cwd_url, url)
                 if not self.is_url(target_url):
                     continue
             if cut and not start:
@@ -325,10 +352,10 @@ class parser:
                         if not hostname:
                             raise gaierror()
                         if self.option['debug']:
-                            self.log(20, f"it be querying the DNS server for '{hostname}' now...")
+                            self.log(20, f"querying the DNS server for '{hostname}' now...")
                         i = self.query_dns(hostname)
                 except gaierror:
-                    self.log(30, f"it skiped {target_url} because there was no response from the DNS server")
+                    self.log(30, f"skiped {target_url} because there was no response from the DNS server")
                     continue
                 except:
                     pass
@@ -387,19 +414,17 @@ class parser:
         # ↑リクエストしたURLを取得
         # aタグの参照先に./~~が出てきたときにこの変数の値と連結させる
         if self.option['debug']:
-            self.log(20, 'it be checking robots.txt...  ')
+            self.log(20, 'checking robots.txt...')
         try:
             self.robots = Parse(root_url, requests=True, headers=self.option['header'], proxies=self.option['proxy'], timeout=self.option['timeout'])
             is_ok = self.robots.can_crawl
             self.delay_check()
-            if self.option['debug']:
-                print('\033[1A\033[60G  '+'\033[32m'+'done'+'\033[0m')
         except NotFoundError:
             is_ok = lambda *_: True
             if self.option['debug']:
                 self.log(20, 'robots.txt was none')
         source: List[bytes] = [response.content]
-        print(f"histories are saved in '{h.history_file}'", file=sys.stderr)
+        print(f"\033[36mhistories are saved in '{h.history_file}'\033[0m", file=sys.stderr)
         for n in range(self.option['recursive']):
             for source, cwd_url in zip(source, cwd_urls):
                 datas = bs(source, self.parser)
@@ -413,43 +438,35 @@ class parser:
                     if not os.path.isdir('styles') and not self.option['check_only']:
                         os.mkdir('styles')
                         self.log(20, 'loading stylesheets...')
-                        if self.option['progress']:
-                            link_info = tqdm(link_data.items(), leave=False, desc="'stylesheets'")
-                        else:
-                            link_info = link_data.items()
                         before_fmt = self.dl.option['formated']
                         self.dl.option['formated'] = os.path.join('styles', '%(file)s')
-                        for from_url, target_url in link_info:
-                            caches = cache(target_url, self)
-                            che = caches.get_cache(target_url)
-                            if che:
-                                result = os.path.join('styles', os.path.basename(che))
-                                shutil.copy(che, result)
-                                self.log(20, f'Use cache instead of downloading "{target_url}"') 
-                            else:
-                                for i in range(self.option['reconnect']+1):
-                                    try:
-                                        res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
-                                        if not self.is_success_status(res.status_code):
+                        for from_url, target_url in tqdm(link_data.items(), leave=False, desc="'stylesheets'"):
+                            with cache(target_url, self) as caches:
+                                che = caches.get_cache(target_url)
+                                if che:
+                                    result = os.path.join('styles', os.path.basename(che))
+                                    shutil.copy(che, result)
+                                    self.log(20, f"using cache instead of downloading '{target_url}'") 
+                                else:
+                                    for i in range(self.option['reconnect']+1):
+                                        try:
+                                            res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
+                                            if not self.is_success_status(res.status_code):
+                                                break
+                                            if self.option['debug']:
+                                                self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
+                                            res.close()
+                                            result = self.dl.recursive_download(res.url, res.content)
+                                            caches.save(target_url, res.content)
                                             break
-                                        if self.option['debug']:
-                                            self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
-                                        res.close()
-                                        result = self.dl.recursive_download(res.url, res.text)
-                                        caches.save(target_url, res.text)
-                                        break
-                                    except Exception as e:
-                                        if i >= self.option['reconnect']-1:
-                                            self.log(30, e)
-                                        sleep(1)
-                                        continue
-                            WebSiteData[from_url] = result
+                                        except Exception as e:
+                                            if i >= self.option['reconnect']-1:
+                                                self.log(30, e)
+                                            sleep(1)
+                                            continue
+                                WebSiteData[from_url] = result
                         self.dl.option['formated'] = before_fmt
-                    if self.option['progress']:
-                        a_info = tqdm(a_data.items(), leave=False, desc="'a tag'")
-                    else:
-                        a_info = a_data.items()
-                    for from_url, target_url in a_info:
+                    for from_url, target_url in tqdm(a_data.items(), leave=False, desc="'a tag'"):
                         for i in range(self.option['reconnect']+1):
                             try:
                                 res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
@@ -464,7 +481,7 @@ class parser:
                                 else:
                                     if not self.is_success_status(res.status_code):
                                         break
-                                    result = self.dl.recursive_download(res.url, res.text, count)
+                                    result = self.dl.recursive_download(res.url, res.content, count)
                                     count += 1
                                     WebSiteData[from_url] = result
                                 break
@@ -479,11 +496,7 @@ class parser:
                             continue
                         sleep(round(uniform(self.option['interval'], max), 1))
                 if self.option['content']:
-                    if self.option['progress']:
-                        img_info = tqdm(img_data.items(), leave=False, desc="'img tag'")
-                    else:
-                        img_info = img_data.items()
-                    for from_url, target_url in img_info:
+                    for from_url, target_url in tqdm(img_data.items(), leave=False, desc="'img tag'"):
                         for i in range(self.option['reconnect']):
                             try:
                                 res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
@@ -546,52 +559,28 @@ class downloader:
         if self.option['debug']:
             self.log(20, """
 request urls: {0}
+\033[35m[settings]\033[0m
 {1}
             """.format(self.url, '\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in self.option.items()])))
-        if self.option['progress'] and not self.option['recursive']:
-            for url in tqdm(self.url):
-                try:
-                    hostname = self.parse.get_hostname(url)
-                    if not hostname:
-                        self.log(40, f"'{url}' is not url")
-                        continue
-                    self.log(20, f"it be querying the DNS server for '{hostname}' now...")
-                    i = self.parse.query_dns(hostname)
+        for url in self.url:
+            try:
+                hostname = self.parse.get_hostname(url)
+                if not hostname:
+                    self.log(40, f"'{url}' is not url")
+                    continue
+                if self.option['debug']:
+                    self.log(20, f"querying the DNS server for '{hostname}' now...")
+                i = self.parse.query_dns(hostname)
+                if self.option['debug']:
                     self.log(20, f"request start {url} [{i[0][-1][0]}]")
-                    result = self.request(url, instance)
-                except gaierror:
-                    self.log(20, f"it skiped '{url}' because there was no response from the DNS server")
-                    continue
-                except error.ArgsError as e:
-                    tqdm.write(str(e), file=sys.stderr)
-                    sys.exit(1)
-                except (MissingSchema, ConnectionError):
-                    raise error.ConnectError(f"Failed to connect to '{url}'")
-                if self.option['recursive'] or self.option['check_only']:
-                    pass
-                elif isinstance(result, list):
-                    self._stdout(*result)
-                else:
-                    self._stdout(result)
-        else:
-            for url in self.url:
-                try:
-                    hostname = self.parse.get_hostname(url)
-                    if not hostname:
-                        self.log(40, f"'{url}' is not url")
-                        continue
-                    i = self.parse.query_dns(hostname)
-                    result = self.request(url, instance)
-                except gaierror:
-                    continue
-                except (MissingSchema, ConnectionError):
-                    raise error.ConnectError(f"Failed to connect to '{url}'")
-                if self.option['recursive'] or self.option['check_only']:
-                    pass
-                elif isinstance(result, list):
-                    self._stdout(*result)
-                else:
-                    self._stdout(result)
+                self.request(url, instance)
+            except gaierror:
+                self.log(20, f"skiped '{url}' because there was no response from the DNS server")
+                continue
+            except Exception as e:
+                if self.option['caperror']:
+                    self.log(40, f'\033[31m{str(e)}\033[0m')
+                continue
 
     def init(self):
         self.option['payload'] = None
@@ -600,24 +589,21 @@ request urls: {0}
         self.option['upload'] = None
 
     def request(self, url: str, instance) -> str or List[requests.models.Response, str]:
-        output_data: list = []
         self.option['formated']: str = self.option['format'].replace('%(root)s', self.parse.get_hostname(url))
         if self.option['types'] != 'post':
-            r: requests.models.Response = instance(url, params=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], timeout=(self.option['timeout']), proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
+            r: requests.models.Response = instance(url, params=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'], stream=True)
         else:
             if self.option['json']:
-                r: requests.models.Response = instance(url, json=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=(self.option['timeout']), headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
+                r: requests.models.Response = instance(url, json=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}), stream=True)
             else:
-                r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=(self.option['timeout']), headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}))
+                r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}), stream=True)
         self.init()
-        if self.option['debug']:
-            self.log(20, 'request... '+'\033[32m'+'done'+'\033[0m'+f'  [{len(r.content)} bytes data] {r.elapsed.total_seconds()}s  ')
-            if not self.option['info']:
-                tqdm.write(f'\n\033[35m[response headers]\033[0m\n\n'+'\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
+        if self.option['debug'] and not self.option['info']:
+            print(f'\n\033[35m[response headers]\033[0m\n\n'+'\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
         if not self.parse.is_success_status(r.status_code):
             return
         if self.option['check_only'] and not self.option['recursive']:
-            tqdm.write(f'{url}  ... \033[32mExists\033[0m')
+            print(f'{url}  ... \033[32mExists\033[0m')
             return
         h = history(r.url)
         if self.option['recursive']:
@@ -638,64 +624,56 @@ request urls: {0}
                 self.log(40, 'the output destination is not a directory or not set')
                 sys.exit(1)
         elif self.option['info']:
-            res: requests.structures.CaseInsensitiveDict = r.headers
-        elif self.option['bytes'] and not self.option['search']:
-            res: bytes = r.content
-        else:
-            res: str = r.text
-        if self.option['search']:
-            res: str = self.parse.html_extraction(res, self.option['search'])
-        if self.option['output']:
-            output_data.append(res)
-        else:
-            mode = 'wb'
-            if self.option['filename'] is not os.path.basename:
-                save_name: str = self.option['filename']
-                if os.path.isdir(self.option['filename']):
-                    save_name: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url)+(self.parse.splitext(r.url)[1]))
-                if isinstance(res, str):
-                    mode = 'w'
-                with open(save_name, mode) as f:
-                    f.write(res)
+            self._stdout(r, [r.headers])
+            return
+        elif self.option['search']:
+            print(self.parse.html_extraction(r.text, self.option['search']))
+            return
+        length = r.headers.get('content-length')
+        if length:
+            if self.option['filename']:
+                if self.option['filename'] is os.path.basename:
+                    save_filename = self.parse.get_filename(r.url)
+                elif os.path.isdir(self.option['filename']):
+                    save_filename: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url))
+                else:
+                    save_filename: str = self.option['filename']
+                with open(save_filename, 'wb' if self.option['bytes'] else 'w') as f:
+                    self.save(f.write, length, r)
             else:
-                save_name: str = self.option['formated'].replace('%(file)s', self.parse.get_filename(r.url))
-                if isinstance(res, str):
-                    mode = 'w'
-                with open(save_name, mode) as f:
-                    f.write(res)
-            h.write(url.rstrip('/'))
-            if self.option['progress']:
-                self.log(20, 'Success Download\n')
-            return save_name
-        if self.option['output']:
-            return [r, output_data]
+                self.save(tqdm.write, length, r)
+        else:
+            print(r.content if self.option['bytes'] else r.text)  
+
+    def save(self, output, length, r):
+        with tqdm(total=int(length), unit="B", unit_scale=True, leave=False) as p:
+            for b in r.iter_content(chunk_size=16384):
+                output(b.decode(errors='backslashreplace') if output == tqdm.write else b)
+                p.update(len(b))
 
     def _stdout(self, response, output='') -> None:
-        if isinstance(response, str):
-            tqdm.write(response)
-        elif self.option['info'] and response:
-            tqdm.write('\n\033[35m[histories of redirect]\033[0m\n')
-            if not response.history:
-                tqdm.write('-')
-            else:
-                for h in response.history:
-                    tqdm.write(h.url)
-                    tqdm.write('↓')
-                tqdm.write(response.url)
-            tqdm.write('\033[35m[cookies]\033[0m\n')
-            if not response.cookies:
-                tqdm.write('-')
-            else:
-                for c in response.cookies:
-                    tqdm.write(f'\033[34m{c.name}\033[0m: {c.value}')
-            tqdm.write('\n\033[35m[response headers]\033[0m\n')
+        tqdm.write('\n\033[35m[histories of redirect]\033[0m\n')
+        if not response.history:
+            tqdm.write('-')
+        else:
+            for h in response.history:
+                tqdm.write(h.url)
+                tqdm.write('↓')
+            tqdm.write(response.url)
+        tqdm.write('\033[35m[cookies]\033[0m\n')
+        if not response.cookies:
+            tqdm.write('-')
+        else:
+            for c in response.cookies:
+                tqdm.write(f'\033[34m{c.name}\033[0m: {c.value}')
+        tqdm.write('\n\033[35m[response headers]\033[0m\n')
         for i in output:
             if isinstance(i, (str, bytes)):
                 tqdm.write(str(i), end='')
             else:
                 for k, v  in i.items():
                     tqdm.write(f'\033[34m{k}\033[0m: {v}')
-        sys.stdout.flush()
+    sys.stdout.flush()
 
     def _split_list(self, array, N):
         n = math.ceil(len(array) / N)
@@ -714,7 +692,7 @@ request urls: {0}
         """
         HTMLから見つかったファイルをダウンロード
         """
-        exts: Tuple[str, str] = self.parse.splitext(url)
+        exts: Tuple[str, str] = self.parse.splitext(self.parse.delete_query(url))
         # フォーマットを元に保存ファイル名を決める
         save_filename: str = self.option['formated'].replace('%(file)s', ''.join(self.parse.splitext(self.parse.get_filename(url)))).replace('%(num)d', str(number)).replace('%(ext)s', exts[1].lstrip('.'))
         if os.path.isfile(save_filename) and not self.ask_continue(f'{save_filename} has already existed\nCan I overwrite?'):
@@ -866,6 +844,7 @@ Ignore SSL certificate validation
 
 -n, --no-progress
 Do not show progress
+\033[33mThis options will be removed next update\033[0m
 
 -d, --data param1=value1 param2=value2 
 Specify the data and parameters to send
@@ -1023,10 +1002,6 @@ This option does not work properly if you delete the files under the {history_di
 
 -----The following special options-----
 
---clear
-Erase all the contents of the log file ({log_file})
-\033[33mThis option will be removed next update, so please use new option, '--purge-log'\033[0m
-
 --purge-log
 Remove log file
 
@@ -1054,6 +1029,10 @@ Show the directory which caches(stylesheet) were stored
 
 -U, --upgrade
 Update the prop
+
+--update-cache
+Update downloaded caches
+And, if you use this option in the directory that 'styles' directory exists, files in the 'styles' directory will be also updated
 
 -p, --parse [file path (optional)]
 Get HTML from file or standard input and parse it
@@ -1086,7 +1065,6 @@ The options that can be changed are as follows
     "types": "get",
     "timeout": [3.0, 60.0],
     "redirect": true,
-    "progress": true,
     "search": false,
     "header": null,
     "cookie": null,
@@ -1117,7 +1095,7 @@ def conversion_arg(args: List[str]) -> list:
     for a in args:
         if a.startswith('-') and not a.startswith('--') and 2 < len(a) and not a in {'-np', '-nc', '-nb', '-nE', '-ns', '-nd', '-dx', '-st'}:
             results: str = '-'+'\n-'.join(a[1:])
-            result.extend(results.split('\n'))
+            result.extend(results.splitlines())
         else:
             result.append(a)
     return result
@@ -1204,7 +1182,7 @@ prop <options> URL [URL...]
             elif args == '-S' or args == '--ignore-SSL':
                 option.config('ssl', False)
             elif args == '-n' or args == '--no-progress':
-                option.config('progress', False)
+                print("'-n', '--no-progress' options will be removed next update")
             elif args == '-a' or args == '--fake-user-agent':
                 try:
                     _stderr = sys.stderr
@@ -1265,7 +1243,7 @@ prop <options> URL [URL...]
                             break
                     option.config('search', word)
                     option.config('bytes', True)
-                except (error.ArgsError, IndexError):
+                except IndexError:
                     error.print(f"The specifying the argument of the '{args}' option is incorrect")
                 except ValueError:
                     error.print(f'{fl[1]} is not number\nPlease specify number')
@@ -1336,7 +1314,7 @@ prop <options> URL [URL...]
                     error.print(f"{args} [StartName]\nPlease specify value of '{args}'")
             elif args == '-np' or args == '--no-parent':
                 option.config('noparent', True)
-            elif args in {'-nc', '-nb', '--no-content', '--no-body'}:
+            elif args in {'-nc', '-nb', '--no-content', '--no-body', '--update-cache'}:
                 continue
             elif args == '-M' or args == '--limit':
                 try:
@@ -1409,10 +1387,6 @@ prop <options> URL [URL...]
                 except (IndexError, FileNotFoundError):
                     html = sys.stdin.read()
                 option.config('parse', html)
-            elif args == '--clear':
-                option.clear()
-                print("\033[33mProcessing completed successfully, but '--clear' option will be removed next update, so please use new option, '--purge-log'\033[0m")
-                sys.exit()
             elif args == "--config-file":
                 print(setting.config_file)
                 sys.exit()
@@ -1457,6 +1431,9 @@ prop <options> URL [URL...]
 
 def main() -> None:
     url, log_file, option = argument()
+    if '--update-cache' in sys.argv:
+        cache.update(option if isinstance(option, dict) else setting.options)
+        sys.exit()
     for index, link in enumerate(url):
         if link == '-':
             link = sys.stdin.readline().rstrip()
@@ -1465,40 +1442,20 @@ def main() -> None:
         if url != [] and not (isinstance(option, dict) and option['parse']):
             if isinstance(option, list):
                 dl: downloader = downloader(url[0], option[0], option[0]['parser'])
-                start(dl)
+                dl.start()
                 for u, o in zip(url[1:], option[1:]):
                     dl.url = u
                     dl.option = o
                     dl.parse.option = o
-                    start(dl)
+                    dl.start()
             else:
                 dl: downloader = downloader(url, option, option['parser'])
-                start(dl)
+                dl.start()
         elif option['parse']:
             dl: downloader = downloader(url, option, option['parser'])
             print(dl.parse.html_extraction(option['parse'], option['search']))
         elif url == []:
             error.print('Missing value for URL\nPlease specify URL')
-
-def start(dl):
-    if dl.option['caperror']:
-        try:
-            dl.start()
-        except ConnectTimeout:
-            dl.log(40, "didn't connect")
-            dl.log(40, f"Connection Error\n'{url}'")
-        except ReadTimeout:
-            dl.log(40, 'timeouted')
-            dl.log(40, f"Timed out while downloading '{url}'")
-        except error.ConnectError as e:
-            dl.log(40, e)
-        except Exception as e:
-            dl.log(40, e)
-    else:
-        try:
-            dl.start()
-        except:
-            pass
 
 if __name__ == '__main__':
     main()

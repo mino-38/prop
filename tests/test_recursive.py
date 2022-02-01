@@ -1,6 +1,7 @@
+import os
 import subprocess
 import tempfile
-import os
+
 
 def test_recursive():
     with tempfile.TemporaryDirectory() as temp:
