@@ -9,7 +9,6 @@
     "cookie": null,
     "proxy": null,
     "auth": null,
-    "bytes": false,
     "recursive": 0,
     "body": true,
     "content": true,

@@ -638,19 +638,25 @@ request urls: {0}
             else:
                 save_filename: str = self.option['filename']
             if length:
-                with open(save_filename, 'wb' if self.option['bytes'] else 'w') as f:
+                with open(save_filename, 'wb') as f:
                     self.save(f.write, length, r)
             else:
-                with open(save_filename, 'wb' if self.option['bytes'] else 'w') as f:
-                    f.write(r.content if self.option['bytes'] else r.text)
+                with open(save_filename, 'wb') as f:
+                    f.write(r.content)
         else:
             self.save(tqdm.write, length, r)
 
     def save(self, output, length, r):
-        with tqdm(total=int(length), unit="B", unit_scale=True, leave=False) as p:
-            for b in r.iter_content(chunk_size=16384):
-                output(b.decode(errors='backslashreplace') if output == tqdm.write else b)
-                p.update(len(b))
+        if output == tqdm.write:
+            with tqdm(total=int(length), unit="B", unit_scale=True, leave=False) as p:
+                for b in r.iter_content(chunk_size=16384):
+                    output(b.decode(errors='backslashreplace'))
+                    p.update(len(b))
+        else:
+            with tqdm(total=int(length), unit="B", unit_scale=True, leave=False) as p:
+                for b in r.iter_content(chunk_size=16384):
+                    output(b)
+                    p.update(len(b))
 
     def _stdout(self, response, output='') -> None:
         tqdm.write('\n\033[35m[histories of redirect]\033[0m\n')
@@ -824,6 +830,7 @@ Even if set timeout, it ignore
 -b, --bytes
 Output of bytes string
 (automatically specified when the -O and -o options are specified)
+\033[33mThis options will be removed next update\033[0m
 
 -t, --timeout [timeout time (number)]
 Set the timeout time
@@ -842,10 +849,6 @@ Communication that can be specified with -x, --method option
 
 -S, --ignore-SSL
 Ignore SSL certificate validation
-
--n, --no-progress
-Do not show progress
-\033[33mThis options will be removed next update\033[0m
 
 -d, --data param1=value1 param2=value2 
 Specify the data and parameters to send
@@ -1071,7 +1074,6 @@ The options that can be changed are as follows
     "cookie": null,
     "proxy": null,
     "auth": null,
-    "bytes": false,
     "recursive": 0,
     "body": true,
     "content": true,
@@ -1147,15 +1149,12 @@ prop <options> URL [URL...]
                 if filename != '-':
                     option.config('filename', os.path.join('.', filename))
                     option.config('output', False)
-                    option.config('bytes', True)
                 skip += 1
-            elif args == '-b' or args == '--bytes':
-                # バイト文字列としてダウンロードする設定をオンにする(ファイルダウンロードの際はこのオプション)
-                option.config('bytes', True)
             elif args == '-O':
                 option.config('filename', os.path.basename)
                 option.config('output', False)
-                option.config('bytes', True)
+            elif args == '-b' or args == '--bytes':
+                print("\033[33m'-b', '--bytes' options will be removed next update")
             elif args == '-t' or args == '--timeout':
                 try:
                     timeout: int = arg[n+1]
@@ -1182,8 +1181,6 @@ prop <options> URL [URL...]
                 skip += 1
             elif args == '-S' or args == '--ignore-SSL':
                 option.config('ssl', False)
-            elif args == '-n' or args == '--no-progress':
-                print("'-n', '--no-progress' options will be removed next update")
             elif args == '-a' or args == '--fake-user-agent':
                 try:
                     _stderr = sys.stderr
@@ -1243,7 +1240,6 @@ prop <options> URL [URL...]
                         else:
                             break
                     option.config('search', word)
-                    option.config('bytes', True)
                 except IndexError:
                     error.print(f"The specifying the argument of the '{args}' option is incorrect")
                 except ValueError:
