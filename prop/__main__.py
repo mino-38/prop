@@ -943,9 +943,9 @@ Display detailed information at the time of request
 -r, --recursive [Recursion count (optional)]
 Recursively download site text links
 When specifying this option, be sure to specify the output destination with the -o option (specify "directory" instead of file)
-Also, if you specify a directory that does not exist, a new one will be created.)
-If you do not specify the number of recursion, it will be executed as if 1 was specified
-Also, if the -nE option is not specified, local path conversion will be performed automatically
+Also, if you specify a directory that doesn't exist, a new one will be created.)
+If you don't specify the number of recursion, it will be executed as if 1 was specified
+Also, if the -nE option isn't specified, local path conversion will be performed automatically
 
 -nc, --no-content
 It don't download images
@@ -1001,8 +1001,8 @@ What you do with multithreading The processing time is greatly reduced
 Recommended to specify
 
 -nd, --no-downloaded
-URLs that have already been downloaded will not be downloaded
-This option does not work properly if you delete the files under the {history_directory} directory (even if you delete it, it will be newly generated when you download it again)
+It don't download urls written in histories
+This option doesn't work properly if you delete the files under the {history_directory} (even if you delete it, it will be newly generated when you download it again)
 
 -----The following special options-----
 
@@ -1016,7 +1016,7 @@ Remove all histories
 Remove all caches
 
 -C, --check
-Does not download, only checks if the specified URL exists
+It doesn't download, only checks if the specified URL exists
 Checks recursively when used with the -r option
 
 --config-file
@@ -1164,7 +1164,7 @@ prop <options> URL [URL...]
                     try:
                         option.config('timeout', (3.0, float(timeout)))
                     except ValueError:
-                        error.print(f"'{timeout}' is not int or float\nPlease specify int or float")
+                        error.print(f"'{timeout}' isn't int or float\nPlease specify int or float")
                 skip += 1
             elif args == '-i' or args == '--ignore':
                 option.config('timeout', None)
