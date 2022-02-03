@@ -306,7 +306,7 @@ class parser:
             self.log(30, f"it changed interval because it was shorter than the time stated in robots.txt  '{self.option['interval']}' => '{delay}'")
             self.option['interval'] = delay
 
-    def _cut(self, list, get, cwd_url, response, root_url, downloaded, is_ok, cut=True):
+    def _cut(self, list, get, cwd_url, response, root_url, downloaded, is_ok, info_dict, cut=True):
         data: dict = dict()
         did_host: set = set()
         dns = False
@@ -322,7 +322,7 @@ class parser:
                 else:
                     continue
                 url = url
-            if not url or '#' in url:
+            if not url or '#' in url or url in info_dict:
                 continue
             if self.is_url(url):
                 target_url: str = url
@@ -396,7 +396,7 @@ class parser:
             downloaded: set = h.read()
         else:
             downloaded: set = set()
-        if self.option['body'] and not self.option['start'] and not self.option['check_only'] and not (self.option['no_downloaded'] and response.url.rstrip('/') in downloaded):
+        if (not os.path.isfile(os.path.join('styles', '.prop_info.json'))) and self.option['body'] and not self.option['start'] and not self.option['check_only'] and not (self.option['no_downloaded'] and response.url.rstrip('/') in downloaded):
             root = self.dl.recursive_download(response.url, response.text, count)
             count += 1
             WebSiteData: dict = {response.url: root}
@@ -429,10 +429,10 @@ class parser:
             for source, cwd_url in zip(source, cwd_urls):
                 datas = bs(source, self.parser)
                 if self.option['body']:
-                    a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, downloaded, is_ok) #aタグ抽出
-                    link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, downloaded, is_ok, cut=False) # rel=stylesheetのlinkタグを抽出
+                    a_data: dict = self._cut(datas.find_all('a'), 'href', cwd_url, response, root_url, downloaded, is_ok, WebSiteData) #aタグ抽出
+                    link_data: dict = self._cut(datas.find_all('link', rel='stylesheet'), "href", cwd_url, response, root_url, downloaded, is_ok, WebSiteData, cut=False) # rel=stylesheetのlinkタグを抽出
                 if self.option['content']:
-                    img_data: dict = self._cut(datas.find_all('img'), ['src', 'data-lazy-src', 'data-src'], cwd_url, response, root_url, downloaded, is_ok) # imgタグ抽出
+                    img_data: dict = self._cut(datas.find_all('img'), ['src', 'data-lazy-src', 'data-src'], cwd_url, response, root_url, downloaded, is_ok, WebSiteData) # imgタグ抽出
                 self.option['header']['Referer'] = cwd_url
                 if self.option['body']:
                     if not os.path.isdir('styles') and not self.option['check_only']:
@@ -646,16 +646,16 @@ request urls: {0}
         else:
             self.save(tqdm.write, length, r)
 
-    def save(self, output, length, r):
-        if output == tqdm.write:
-            with tqdm(total=int(length), unit="B", unit_scale=True, leave=False) as p:
+    def save(self, write, length, r):
+        if write == tqdm.write:
+            with tqdm(total=int(length), unit="B", unit_scale=True) as p:
                 for b in r.iter_content(chunk_size=16384):
-                    output(b.decode(errors='backslashreplace'))
+                    write(b.decode(errors='backslashreplace'), end='')
                     p.update(len(b))
         else:
-            with tqdm(total=int(length), unit="B", unit_scale=True, leave=False) as p:
+            with tqdm(total=int(length), unit="B", unit_scale=True) as p:
                 for b in r.iter_content(chunk_size=16384):
-                    output(b)
+                    write(b)
                     p.update(len(b))
 
     def _stdout(self, response, output='') -> None:
