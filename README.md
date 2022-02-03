@@ -183,8 +183,7 @@ $ pytest -s
 ```
 
 # New feature
-- You can update caches by using --update-cache option
-- Show the progress during downloading
+- If you specify same url and to same directory, urls written in styles/.prop_info.json are ignored.
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).

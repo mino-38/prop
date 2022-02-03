@@ -121,7 +121,7 @@ $ prop -r -f "test-%(num)d.%(ext)s" -o store_ directory URL
 |  -np  |  --no-parent  |  起点のURLより上の階層のURLは無視するオプション  |
 |  -nc  |  --no-content  |  aタグのhref属性のURLのみ対象とするオプション  |
 |  -nb  |  --no-body  |  imgタグのsrc属性のURLのみ対象とするオプション  |
-|  -nd  | --no-downloaded  |  既にダウンロードしたファイルは無視するオプション  |
+|  -nd  | --no-downloaded  |  履歴に存在するURLを無視するオプション  |
 |  -dx  |  --download-external  |  外部サイトのURLもダウンロード対象とするオプション  |
 |  -st  |  --start  |  ダウンロードを開始するファイル名を指定するオプション  |
 
@@ -180,9 +180,7 @@ $ pytest -s
 ```
 
 # 新機能
-- --update-cacheオプションを使うことでローカルにキャッシュしたファイルをアップデートする事ができるようになりました
-
-- ダウンロード中に進捗を表示するようにしました
+- 再度同じディレクトリ、同じURLを対称としたときに、styles/.prop_info.jsonに書かれているURLは無視するようにしました(-ndオプションとは別です)
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
