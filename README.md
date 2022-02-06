@@ -183,8 +183,7 @@ $ pytest -s
 ```
 
 # New feature
-- You can update caches by using --update-cache option
-- Show the progress during downloading
+- When you use -s, -F and -Y options, you can now specify output destination of results by using -o and --output options.
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).
