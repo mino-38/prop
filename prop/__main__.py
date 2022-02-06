@@ -850,11 +850,6 @@ Download with the same name as the download source file name
 -i, --ignore
 Even if set timeout, it ignore
 
--b, --bytes
-Output of bytes string
-(automatically specified when the -O and -o options are specified)
-\033[33mThis options will be removed next update\033[0m
-
 -t, --timeout [timeout time (number)]
 Set the timeout time
 Please specify number
@@ -1180,8 +1175,6 @@ prop <options> URL [URL...]
             elif args == '-O':
                 option.config('filename', os.path.basename)
                 option.config('output', False)
-            elif args == '-b' or args == '--bytes':
-                print("\033[33m'-b', '--bytes' options will be removed next update")
             elif args == '-t' or args == '--timeout':
                 try:
                     timeout: int = arg[n+1]
