@@ -3,6 +3,7 @@
     "timeout": [3.0, 60.0],
     "redirect": true,
     "search": false,
+    "only_body": false,
     "header": {
         "User-Agent": "Prop/1.0.0"
     },

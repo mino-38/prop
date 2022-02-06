@@ -87,7 +87,7 @@ class setting:
     def __init__(self):
         # 設定できるオプションたち
         # 他からimportしてもこの辞書を弄ることで色々できる
-        self.options: Dict[str, bool or str or None] = {'limit': 0, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/1.1.2'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
+        self.options: Dict[str, bool or str or None] = {'limit': 0, 'only_body': False, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/1.1.2'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
@@ -582,12 +582,6 @@ request urls: {0}
                     self.log(40, f'\033[31m{str(e)}\033[0m')
                 continue
 
-    def init(self):
-        self.option['payload'] = None
-        self.option['cookie'] = None
-        self.option['auth'] = None
-        self.option['upload'] = None
-
     def request(self, url: str, instance) -> str or List[requests.models.Response, str]:
         self.option['formated']: str = self.option['format'].replace('%(root)s', self.parse.get_hostname(url))
         if self.option['types'] != 'post':
@@ -597,7 +591,6 @@ request urls: {0}
                 r: requests.models.Response = instance(url, json=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}), stream=True)
             else:
                 r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}), stream=True)
-        self.init()
         if self.option['debug'] and not self.option['info']:
             print(f'\n\033[35m[response headers]\033[0m\n\n'+'\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
         if not self.parse.is_success_status(r.status_code):
@@ -624,19 +617,32 @@ request urls: {0}
                 self.log(40, 'the output destination is not a directory or not set')
                 sys.exit(1)
         elif self.option['info']:
-            self._stdout(r, [r.headers])
+            self._print(r, [r.headers], file=self.get_fmt(r))
             return
         elif self.option['search']:
-            print(self.parse.html_extraction(r.text, self.option['search']))
+            result = self.parse.html_extraction(r.text, self.option['search'])
+            save_filename = self.get_fmt(r)
+            if save_filename:
+                with open(save_filename, 'w') as f:
+                    f.write(result)
+            else:
+                print(result)
+            return
+        elif self.option['only_body']:
+            try:
+                s = bs(r.content, self.parser)
+                save_filename = self.get_fmt(r)
+                if save_filename:
+                    with open(save_filename, 'w') as f:
+                        f.write(s.text)
+                else:
+                    print(s.text)
+            except Exception as e:
+                self.log(40, e)
             return
         length = r.headers.get('content-length')
-        if self.option['filename']:
-            if self.option['filename'] is os.path.basename:
-                save_filename = self.parse.get_filename(r.url)
-            elif os.path.isdir(self.option['filename']):
-                save_filename: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url))
-            else:
-                save_filename: str = self.option['filename']
+        save_filename = self.get_fmt(r)
+        if save_filename:
             if length:
                 with open(save_filename, 'wb') as f:
                     self.save(f.write, length, r)
@@ -646,19 +652,33 @@ request urls: {0}
         else:
             self.save(tqdm.write, length, r)
 
+    def get_fmt(self, r):
+        if self.option['filename']:
+            if self.option['filename'] is os.path.basename:
+                save_filename = self.parse.get_filename(r.url)
+            elif os.path.isdir(self.option['filename']):
+                save_filename: str = os.path.join(self.option['filename'], self.parse.get_filename(r.url))
+            else:
+                save_filename: str = self.option['filename']
+            return save_filename
+        else:
+            return None
+
     def save(self, write, length, r):
         if write == tqdm.write:
-            with tqdm(total=int(length), unit="B", unit_scale=True) as p:
+            with tqdm(total=int(length) if length else None, unit="B", unit_scale=True) as p:
                 for b in r.iter_content(chunk_size=16384):
                     write(b.decode(errors='backslashreplace'), end='')
                     p.update(len(b))
         else:
-            with tqdm(total=int(length), unit="B", unit_scale=True) as p:
+            with tqdm(total=int(length) if length else None, unit="B", unit_scale=True) as p:
                 for b in r.iter_content(chunk_size=16384):
                     write(b)
                     p.update(len(b))
 
-    def _stdout(self, response, output='') -> None:
+    def _print(self, response, output=None, file=None) -> None:
+        if file:
+            sys.stdout = open(file, 'w')
         tqdm.write('\n\033[35m[histories of redirect]\033[0m\n')
         if not response.history:
             tqdm.write('-')
@@ -680,7 +700,10 @@ request urls: {0}
             else:
                 for k, v  in i.items():
                     tqdm.write(f'\033[34m{k}\033[0m: {v}')
-    sys.stdout.flush()
+        sys.stdout.flush()
+        if file:
+            sys.stdout.close()
+            sys.stdout = sys.__stdout__
 
     def _split_list(self, array, N):
         n = math.ceil(len(array) / N)
@@ -916,6 +939,10 @@ src=reference
 And, you can also use the css selector without using the above
 
 prop -s "a, script" [URL]
+
+-Y, --only-body
+Show the only body if contents are html
+(not body tag)
 
 -M, --limit [num]
 Specify the number of '-s', '--search' result or the number of recursive download files (-r, --recursive option)
@@ -1244,6 +1271,8 @@ prop <options> URL [URL...]
                     error.print(f"The specifying the argument of the '{args}' option is incorrect")
                 except ValueError:
                     error.print(f'{fl[1]} is not number\nPlease specify number')
+            elif args == '-Y' or args == '--only-body':
+                option.config('only_body', True)
             elif args == '-l' or args == '--no-redirect':
                 option.config('redirect', False)
             elif args == '-D' or args == '-D': 
@@ -1434,6 +1463,8 @@ def main() -> None:
     for index, link in enumerate(url):
         if link == '-':
             link = sys.stdin.readline().rstrip()
+        elif not parser.is_url(link):
+            link = 'http://' + link
         url[index] = link
     with log_file:
         if url != [] and not (isinstance(option, dict) and option['parse']):
