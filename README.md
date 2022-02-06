@@ -183,7 +183,7 @@ $ pytest -s
 ```
 
 # New feature
-- If you specify same url and to same directory, urls written in styles/.prop_info.json are ignored.
+- When you use -s, -F and -Y options, you can now specify output destination of results by using -o and --output options.
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).

@@ -180,7 +180,7 @@ $ pytest -s
 ```
 
 # 新機能
-- 再度同じディレクトリ、同じURLを対称としたときに、styles/.prop_info.jsonに書かれているURLは無視するようにしました(-ndオプションとは別です)
+- -s, -F, -Yオプションを使用した場合の出力先も、-o, --outputオプションで指定できるようにしました
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
