@@ -183,7 +183,7 @@ $ pytest -s
 ```
 
 # New feature
-- When you use -s, -F and -Y options, you can now specify output destination of results by using -o and --output options.
+- Fixed bugs.
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).
