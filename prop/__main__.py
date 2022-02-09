@@ -1474,7 +1474,16 @@ def main() -> None:
                 dl.start()
         elif option['parse']:
             dl: downloader = downloader(url, option, option['parser'])
-            print(dl.parse.html_extraction(option['parse'], option['search']))
+            if option['only_body']:
+                s = bs(option['parse'], dl.parser)
+                result = s.text
+            else:
+                result = dl.parse.html_extraction(option['parse'], option['search'])
+            if option['filename']:
+                with open(option['filename'], 'w') as f:
+                    f.write(result)
+            else:
+                print(result)
         elif url == []:
             error.print('Missing value for URL\nPlease specify URL')
 
