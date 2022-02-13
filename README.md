@@ -161,27 +161,6 @@ $ prop --purge-history
 $ prop --purge-cache
 ````
 
-# Tests
-First, you must install pytest
-
-```bash
-$ pip install pytest
-```
-
-And, change directory to 'prop' or 'prop/tests' and run 'pytest'
-
-```bash
-$ git clone https://github.com/mino-38/prop
-$ cd prop
-$ pytest
-```
-
-If you want to see output during testing, please use -s option
-
-```bash
-$ pytest -s
-```
-
 # New feature
 - Fixed bugs.
 
