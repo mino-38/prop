@@ -162,7 +162,7 @@ $ prop --purge-cache
 ````
 
 # New feature
-- Connection timeout can now set by using '-t', '--timeout' options.
+- Connection timeout can now set by using -t, --timeout options.
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).
