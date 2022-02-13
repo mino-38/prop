@@ -94,7 +94,7 @@ If a shorter time than the robots.txt directive is specified, it will be replace
 
 #### -f, --format [format]
 Allows you to specify the format of the file name of the file to be downloaded.  
-The special format is as follows
+The special format is as follows.
 
 |  format  |  value to be assigned  |
 |  ----  |  ----  |
@@ -135,7 +135,7 @@ Use the -h and --help options to see help message.
 Please refer to the help page, which includes the options listed here.
 
 # Where to save history, logs, and cache
-You can see where the history is stored with --history-directory, where the logs are written with --log-file option, and where the cache is stored with --cache-directory
+You can see where the history is stored with --history-directory, where the logs are written with --log-file option, and where the cache is stored with --cache-directory.
 
 ```bash
 # A quick look at the logs
@@ -148,7 +148,7 @@ $ ls $(prop --history-directory)
 $ prop --cache-directory
 ````
 
-Also, have the option to remove them
+Also, have the option to remove them.
 
 ```bash
 # Remove log file
@@ -162,7 +162,7 @@ $ prop --purge-cache
 ````
 
 # New feature
-- Fixed bugs.
+- Connection timeout can now set by using '-t', '--timeout' options.
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).
