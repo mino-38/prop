@@ -158,29 +158,8 @@ $ prop --purge-history
 $ prop --purge-cache
 ```
 
-#  テスト
-まず、pytestをインストールして下さい
-
-```bash
-$ pip install pytest
-```
-
-インストール済みの人、またはインストールした人はカレントディレクトリを'prop', または'prop/tests'にしてからpytestコマンドを実行してください
-
-```bash
-$ git clone https://github.com/mino-38/prop
-$ cd prop
-$ pytest
-```
-
-テスト中のpropコマンドの出力を見たい場合は、'-s'オプションを付けてpytestを実行してください
-
-```bash
-$ pytest -s
-```
-
 # 新機能
-- -s, -F, -Yオプションを使用した場合の出力先も、-o, --outputオプションで指定できるようにしました
+- -t, --timeoutオプションでConnectionTimeoutの設定を可能にしました
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
