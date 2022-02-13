@@ -160,6 +160,7 @@ $ prop --purge-cache
 
 # 新機能
 - -t, --timeoutオプションでConnectionTimeoutの設定を可能にしました
+- -u, --uploadオプションで、フォーム名(name属性)を指定してアップロード出来るようになりました
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
