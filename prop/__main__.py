@@ -3,6 +3,7 @@ import glob
 import json
 import logging
 import math
+import mimetypes
 import os
 import platform
 import re
@@ -577,20 +578,30 @@ request urls: {0}
             except gaierror:
                 self.log(20, f"skiped '{url}' because there was no response from the DNS server")
                 continue
+            """
             except Exception as e:
                 if self.option['caperror']:
                     self.log(40, f'\033[31m{str(e)}\033[0m')
                 continue
+            """
 
     def request(self, url: str, instance) -> str or List[requests.models.Response, str]:
         self.option['formated']: str = self.option['format'].replace('%(root)s', self.parse.get_hostname(url))
         if self.option['types'] != 'post':
             r: requests.models.Response = instance(url, params=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'], stream=True)
         else:
-            if self.option['json']:
-                r: requests.models.Response = instance(url, json=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}), stream=True)
+            if self.option['upload']:
+                name, form = self.option['upload']
+                with open(name, 'rb') as f:
+                    if form:
+                        upload_data = {form: (f.name, f, mimetypes.guess_type(f.name)[0])}
+                    else:
+                        upload_data = {f.name: f}
+                    r: requests.models.Response = instance(url, allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=upload_data, stream=True)
+            elif self.option['json']:
+                r: requests.models.Response = instance(url, json=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], stream=True)
             else:
-                r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], files=(self.option['upload'] and {'files': open(self.option['upload'], 'rb')}), stream=True)
+                r: requests.models.Response = instance(url, data=self.option['payload'], allow_redirects=self.option['redirect'], cookies=self.option['cookie'], auth=self.option['auth'], proxies=self.option['proxy'], timeout=self.option['timeout'], headers=self.option['header'], verify=self.option['ssl'], stream=True)
         if self.option['debug'] and not self.option['info']:
             print(f'\n\033[35m[response headers]\033[0m\n\n'+'\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in r.headers.items()])+'\n', file=sys.stderr)
         if not self.parse.is_success_status(r.status_code):
@@ -954,7 +965,7 @@ Perform Basic authentication
 -l, --no-redirect
 Disable redirection
 
--u, --upload file path
+-u, --upload file [path] [form (optional)]
 You can specify the file to upload at the time of post (multiple files cannot be specified)
 
 -D, --debug
@@ -1273,12 +1284,19 @@ prop <options> URL [URL...]
             elif args == '-u' or args == '--upload':
                 try:
                     path = arg[n+1]
+                    skip += 1
                 except IndexError:
                     error.print(f"{args} [filepath]\nPlease specify value of '{args}'")
+                try:
+                    form = arg[n+2]
+                    skip += 1
+                except IndexError:
+                    form = None
                 if os.path.exists(path):
-                    option.config('upload', path)
+                    option.config('upload', (path, form))
                 else:
-                    error.print(f'The existence couldn't be confirmed: {path}')
+                    error.print(f"The existence couldn't be confirmed: {path}")
+                option.config('types', 'post')
             elif args == '-X' or args == '--proxy':
                 try:
                     proxy_url: str = arg[n+1]
