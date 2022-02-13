@@ -1182,7 +1182,7 @@ prop <options> URL [URL...]
                     error.print(f"{args} [timeout]\nPlease specify value of '{args}'")
                 if option.options.get('notimeout') is None:
                     try:
-                        option.config('timeout', (3.0, float(timeout)))
+                        option.config('timeout', float(timeout))
                     except ValueError:
                         error.print(f"'{timeout}' isn't int or float\nPlease specify int or float")
                 skip += 1
@@ -1278,7 +1278,7 @@ prop <options> URL [URL...]
                 if os.path.exists(path):
                     option.config('upload', path)
                 else:
-                    error.print(f'The existence could not be confirmed: {path}')
+                    error.print(f'The existence couldn't be confirmed: {path}')
             elif args == '-X' or args == '--proxy':
                 try:
                     proxy_url: str = arg[n+1]
@@ -1323,7 +1323,7 @@ prop <options> URL [URL...]
                 if result2:
                     option.config('body', False)
                 if result1 and result2:
-                    error.print("'-nc' and '-nb' options can't be used together")
+                    error.print("'-nc' and '-nb' options cannot be used together")
                     sys.exit(1)
             elif args == '-st' or args == '--start':
                 try:
@@ -1359,11 +1359,11 @@ prop <options> URL [URL...]
                     error.print(f"{args} [format]\nPlease specify value of '{args}'")
                 if '%(file)s' in string or '%(num)d' in string:
                     if re.match(r'%\(num\)d[0-9]', string) or ('%(file)s' in string and (not string.endswith('%(file)s') or 1 < string.count('%(file)s'))) or (1 < string.count('%(num)d')) or any(map(string.__contains__, ['%(num)d%(file)s', '%(num)d%(ext)s'])):
-                        print("""\033[33mSorry, about format, there are the following restrictions because it will not be able to generate an accurate serial number
+                        print("""\033[33mSorry, about format, there are the following restrictions because it won't be able to generate an accurate serial number
 
 - '%(file)s' and '%(ext)s' format can only be at the end
 
-- '%(num)d' format cannot include more than one
+- '%(num)d' format cannot be included more than one
 
 - Numbers cannot be used immediately after '%(num)d'
 
