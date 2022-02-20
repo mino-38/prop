@@ -118,7 +118,7 @@ $ prop -r -f "test-%(num)d.%(ext)s" -o store_ directory URL
 Note that if the format does not include %(num)d or %(file)s, it will not be reflected (because the store name does not change dynamically).  
 Also, there are some restrictions: %(file)s and %(ext)s formats can only be used at the end, more than one %(num)d cannot be used, and special formats such as %(num)d%(file)s cannot be used consecutively (because it is impossible to generate an exact sequential number for %(num)d).
 
-## Option to restrict (extend) the download target
+## Option to restrict (or extend) the download target
 |  short option name  |  long option name  |  processing  |
 |  ----  |  ----  |  ----  |
 |  -np  |  --no-parent  |  option to ignore URLs in the hierarchy above the starting URL |
@@ -127,6 +127,7 @@ Also, there are some restrictions: %(file)s and %(ext)s formats can only be used
 |  -nd  |  --no-downloaded  |  option to ignore files written in histories  |
 |  -dx  |  --download-external  | option to include URLs of external sites in the download  |
 |  -st  |  --start  |  option to specify a file name to start downloading  |
+|  -n  |  --download-filename  |  Only download files include specified string  |
 
 The -nc and -nb options cannot be used together.
 
@@ -163,6 +164,7 @@ $ prop --purge-cache
 
 # New feature
 - Changed a few log
+- Add -n, --download-filename options
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).
