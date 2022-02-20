@@ -88,7 +88,7 @@ class setting:
     def __init__(self):
         # 設定できるオプションたち
         # 他からimportしてもこの辞書を弄ることで色々できる
-        self.options: Dict[str, bool or str or None] = {'limit': 0, 'only_body': False, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/1.1.2'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
+        self.options: Dict[str, bool or str or None] = {'download_name': '', 'limit': 0, 'only_body': False, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/1.1.2'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
@@ -339,7 +339,7 @@ class parser:
                     continue
             if cut and ((self.option['noparent'] and (not target_url.startswith(response.url) and target_url.startswith(root_url))) or target_url in set(data.values()) or ((target_url.startswith(cwd_url) and  '#' in target_url) or (self.option['no_dl_external'] and not target_url.startswith(root_url)))):
                 continue
-            if cut and (self.option['no_downloaded'] and target_url in downloaded):
+            if cut and (self.option['download_name'] not in target_url or (self.option['no_downloaded'] and target_url in downloaded)):
                 continue
             if self.option['debug']:
                 self.log(20, f"found '{target_url}'")
@@ -1007,6 +1007,9 @@ It don't convert web page URL references to local paths
 -dx, --download-external
 External address sites are also downloaded
 
+-n, --download-filename [string]
+Only download files include string specified
+
 -f, --format [format]
 You can specify the format of the file save name at the time of recursive download
 If "%(file)s" or "%(num)d" aren't included in the character string, it won't be applied because saved name isn't changed for each file
@@ -1361,6 +1364,12 @@ prop <options> URL [URL...]
                     skip += 1
                 except IndexError:
                     error.print(f"{args} [StartName]\nPlease specify value of '{args}'")
+            elif args == '-n' or args == '--download-filename':
+                try:
+                    option.config('download_name', arg[n+1])
+                    skip += 1
+                except IndexError:
+                    error.print(f"{args} [string]\nPlease specify value of '{args}'")
             elif args == '-np' or args == '--no-parent':
                 option.config('noparent', True)
             elif args in {'-nc', '-nb', '--no-content', '--no-body', '--update-cache'}:
