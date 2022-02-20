@@ -162,8 +162,7 @@ $ prop --purge-cache
 ````
 
 # New feature
-- Connection timeout can now set by using -t, --timeout options.
-- You can now upload with specifying form name by using -u, --upload
+- Changed a few log
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).
