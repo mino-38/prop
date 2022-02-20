@@ -164,7 +164,7 @@ $ prop --purge-cache
 
 # New feature
 - Changed a few log
-- Add -n, --download-filename options
+- Added -n, --download-filename options
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).
