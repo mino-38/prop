@@ -124,6 +124,7 @@ $ prop -r -f "test-%(num)d.%(ext)s" -o store_ directory URL
 |  -nd  | --no-downloaded  |  履歴に存在するURLを無視するオプション  |
 |  -dx  |  --download-external  |  外部サイトのURLもダウンロード対象とするオプション  |
 |  -st  |  --start  |  ダウンロードを開始するファイル名を指定するオプション  |
+|  -n  |  --download-filename  |  指定された文字列を含むファイルのみをダウンロードします  |
 
 ※ -ncオプションと-nbオプションの併用はできません
 
@@ -159,8 +160,8 @@ $ prop --purge-cache
 ```
 
 # 新機能
-- -t, --timeoutオプションでConnectionTimeoutの設定を可能にしました
-- -u, --uploadオプションで、フォーム名(name属性)を指定してアップロード出来るようになりました
+- ログを少し変更
+- -n, --download-filenameオプションを追加
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
