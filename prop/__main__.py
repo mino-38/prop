@@ -451,11 +451,15 @@ class parser:
                                 else:
                                     for i in range(self.option['reconnect']+1):
                                         try:
+                                            if i == 0:
+                                                self.log(20, f"request start: '{target_url}'")
+                                            else:
+                                                self.log(20, f"retrying {i}")
                                             res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
                                             if not self.is_success_status(res.status_code):
                                                 break
                                             if self.option['debug']:
-                                                self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
+                                                tqdm.write(f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]", file=sys.stderr)
                                             res.close()
                                             result = self.dl.recursive_download(res.url, res.content)
                                             caches.save(target_url, res.content)
@@ -470,18 +474,22 @@ class parser:
                     for from_url, target_url in tqdm(a_data.items(), leave=False, desc="'a tag'"):
                         for i in range(self.option['reconnect']+1):
                             try:
+                                if i == 0:
+                                    self.log(20, f"request start: '{target_url}'")
+                                else:
+                                    self.log(20, f"retrying {i}...")
                                 res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
+                                if not self.is_success_status(res.status_code):
+                                    break
                                 temporary_list.append(res.content)
                                 temporary_list_urls.append(res.url)
                                 h.write(target_url)
                                 if self.option['debug']:
-                                    self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
+                                    tqdm.write(f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]", file=sys.stderr)
                                 res.close()
                                 if self.option['check_only']:
                                     WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'Not'
                                 else:
-                                    if not self.is_success_status(res.status_code):
-                                        break
                                     result = self.dl.recursive_download(res.url, res.content, count)
                                     count += 1
                                     WebSiteData[from_url] = result
@@ -500,12 +508,16 @@ class parser:
                     for from_url, target_url in tqdm(img_data.items(), leave=False, desc="'img tag'"):
                         for i in range(self.option['reconnect']):
                             try:
+                                if i == 0:
+                                    self.log(20, f"request start: '{target_url}'")
+                                else:
+                                    self.log(20, f"retrying {i}")
                                 res: requests.models.Response = session.get(target_url, timeout=self.option['timeout'], proxies=self.option['proxy'], headers=self.option['header'], verify=self.option['ssl'])
                                 h.write(target_url)
                                 if not self.is_success_status(res.status_code):
                                     break
                                 if self.option['debug']:
-                                    self.log(20, f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]")
+                                    tqdm.write(f"response speed: {res.elapsed.total_seconds()}s [{len(res.content)} bytes data]", file=sys.stderr)
                                 res.close()
                                 if self.option['check_only']:
                                     WebSiteData[target_url] = 'Exists' if self.is_success_status(res.status_code) else 'Not'
@@ -756,7 +768,7 @@ request urls: {0}
                 else:
                     return
         if self.option['debug']:
-            self.log(20, f'{url} => {os.path.abspath(save_filename)}')
+            self.log(20, f'saved: {url} => {os.path.abspath(save_filename)}')
         return save_filename
 
     def local_path_conversion(self, conversion_urls: Tuple[dict, list]) -> None:
