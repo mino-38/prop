@@ -1005,10 +1005,10 @@ It don't download the parent directory of the download source URL
 It don't convert web page URL references to local paths
 
 -dx, --download-external
-External address sites are also downloaded
+Also download external address sites
 
 -n, --download-filename [string]
-Only download files include string specified
+Only download files include specified string
 
 -f, --format [format]
 You can specify the format of the file save name at the time of recursive download
