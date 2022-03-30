@@ -381,7 +381,7 @@ class parser:
             return max(num)+1
         return 0
 
-    def spider(self, response, *, h=sys.stdout, session) -> Tuple[dict, list]:
+    def spider(self, response, *, h=sys.stdout, session):
         """
         HTMLからaタグとimgタグの参照先を抽出し保存
         """
