@@ -15,7 +15,6 @@ from multiprocessing import Process
 from random import uniform
 from socket import gaierror
 from time import sleep
-from typing import Any, Dict, List, Tuple
 from urllib.error import URLError
 from urllib.parse import unquote, urldefrag, urljoin, urlparse
 
