@@ -88,7 +88,7 @@ class setting:
     def __init__(self):
         # 設定できるオプションたち
         # 他からimportしてもこの辞書を弄ることで色々できる
-        self.options: Dict[str, bool or str or None] = {'download_name': '', 'limit': 0, 'only_body': False, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/1.1.2'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
+        self.options = {'download_name': '', 'limit': 0, 'only_body': False, 'debug': False, 'parse': False, 'types': 'get', 'payload': None, 'output': True, 'filename': None, 'timeout': (3.0, 60.0), 'redirect': True, 'upload': None, 'json': False, 'search': None, 'header': {'User-Agent': 'Prop/1.1.2'}, 'cookie': None, 'proxy': {"http": os.environ.get("http_proxy") or os.environ.get("HTTP_PROXY"), "https": os.environ.get("https_proxy") or os.environ.get("HTTPS_PROXY")}, 'auth': None, 'bytes': False, 'recursive': 0, 'body': True, 'content': True, 'conversion': True, 'reconnect': 5, 'caperror': True, 'noparent': False, 'no_downloaded': False, 'interval': 1, 'start': None, 'format': '%(file)s', 'info': False, 'multiprocess': False, 'ssl': True, 'parser': 'html.parser', 'no_dl_external': True, 'save_robots': True, 'check_only': False}
         # 以下logger設定
         logger = logging.getLogger('Log of Prop')
         logger.setLevel(20)
@@ -106,7 +106,7 @@ class setting:
         ./config.json(設定ファイル)をロード
         """
         with open(setting.config_file, 'r') as f:
-            config: Dict[str, bool or str or None] = json.load(f)
+            config = json.load(f)
         if isinstance(config['timeout'], list):
             config['timeout'] = tuple(config['timeout'])
         self.options.update(config)
@@ -411,7 +411,7 @@ class parser:
                 WebSiteData.update(json.load(f))
         root_url: str = self.get_rootdir(response.url)
         # ↑ホームURLを取得
-        cwd_urls: List[str] = [response.url]
+        cwd_urls = [response.url]
         # ↑リクエストしたURLを取得
         # aタグの参照先に./~~が出てきたときにこの変数の値と連結させる
         if self.option['debug']:
@@ -424,7 +424,7 @@ class parser:
             is_ok = lambda *_: True
             if self.option['debug']:
                 self.log(20, 'robots.txt was none')
-        source: List[bytes] = [response.content]
+        source = [response.content]
         print(f"\033[36mhistories are saved in '{h.history_file}'\033[0m", file=sys.stderr)
         for n in range(self.option['recursive']):
             for source, cwd_url in zip(source, cwd_urls):
@@ -534,9 +534,9 @@ class parser:
                             if self.option['debug']:
                                 self.log(20, f"didn't response '{target_url}'")
                         sleep(round(uniform(self.option['interval'], max), 1))
-            cwd_urls: List[str] = temporary_list_urls
+            cwd_urls = temporary_list_urls
             temporary_list_urls: list = []
-            source: List[bytes] = temporary_list
+            source = temporary_list
             temporary_list: list = []
             if self.option['debug']:
                 self.log(20, f'{n+1} hierarchy... '+'\033[32m'+'done'+'\033[0m')
@@ -554,10 +554,10 @@ class downloader:
     再帰ダウンロードやリクエスト&パースする関数を定義するクラス
     start_download以降の関数は再帰ダウンロード関連の関数
     """
-    def __init__(self, url: str, option: Dict[str, bool or str or None], parsers='html.parser'):
-        self.url: List[str] = url # リスト
+    def __init__(self, url: str, option, parsers='html.parser'):
+        self.url = url # リスト
         self.parser: str = parsers
-        self.option: Dict[str, Any] = option
+        self.option = option
         self.session = requests.Session()
         logger = logging.getLogger('Log of Prop')
         self.log = logger.log
@@ -590,12 +590,10 @@ request urls: {0}
             except gaierror:
                 self.log(20, f"skiped '{url}' because there was no response from the DNS server")
                 continue
-            """
             except Exception as e:
                 if self.option['caperror']:
                     self.log(40, f'\033[31m{str(e)}\033[0m')
                 continue
-            """
 
     def request(self, url: str, instance) -> str or List[requests.models.Response, str]:
         self.option['formated']: str = self.option['format'].replace('%(root)s', self.parse.get_hostname(url))
@@ -631,7 +629,7 @@ request urls: {0}
                 cwd = os.getcwd()
                 os.chdir(self.option['filename'])
                 self.log(20, 'parsing...')
-                res: Dict[str, str or bytes] = self.parse.spider(r, h=h, session=self.session)
+                res = self.parse.spider(r, h=h, session=self.session)
                 self.log(20, 'download... '+'\033[32m'+'done'+'\033[0m')
                 self.start_conversion(res)
                 os.chdir(cwd)
@@ -745,7 +743,7 @@ request urls: {0}
         """
         HTMLから見つかったファイルをダウンロード
         """
-        exts: Tuple[str, str] = self.parse.splitext(self.parse.delete_query(url))
+        exts = self.parse.splitext(self.parse.delete_query(url))
         # フォーマットを元に保存ファイル名を決める
         save_filename: str = self.option['formated'].replace('%(file)s', ''.join(self.parse.splitext(self.parse.get_filename(url)))).replace('%(num)d', str(number)).replace('%(ext)s', exts[1].lstrip('.'))
         if os.path.isfile(save_filename) and not self.ask_continue(f'{save_filename} has already existed\nCan I overwrite?'):
@@ -771,11 +769,11 @@ request urls: {0}
             self.log(20, f'saved: {url} => {os.path.abspath(save_filename)}')
         return save_filename
 
-    def local_path_conversion(self, conversion_urls: Tuple[dict, list]) -> None:
+    def local_path_conversion(self, conversion_urls) -> None:
         if self.option['conversion'] and self.option['body']:
             if self.option['multiprocess']:
-                to_path: List[str] = list(conversion_urls.values())
-                splited_path_list: List[str] = self._split_list(to_path, 4) # 4分割
+                to_path = list(conversion_urls.values())
+                splited_path_list = self._split_list(to_path, 4) # 4分割
                 processes: list = []
                 for path in splited_path_list[1:]:
                     # 分けた内3つをサブプロセスで変換する
@@ -793,7 +791,7 @@ request urls: {0}
             else:
                 self.conversion_path(list(conversion_urls.values()), conversion_urls, self.option['formated'])
 
-    def conversion_path(self, task: List[str], all_download_data: Tuple[dict, list], save_fmt: str) -> None:
+    def conversion_path(self, task, all_download_data, save_fmt: str) -> None:
         # URL変換
         for path in task:
             while True:
@@ -1141,7 +1139,7 @@ The options that can be changed are as follows
 }
 """.replace("{config_file}", setting.config_file).replace("{log_file}", setting.log_file).replace('{history_directory}', history.root))
 
-def conversion_arg(args: List[str]) -> list:
+def conversion_arg(args) -> list:
     result: list = []
     for a in args:
         if a.startswith('-') and not a.startswith('--') and 2 < len(a) and not a in {'-np', '-nc', '-nb', '-nE', '-ns', '-nd', '-dx', '-st'}:
@@ -1174,7 +1172,7 @@ def argument() -> (list, dict, logging.Logger.log):
         option.config_load()
         skip: int = 1
         url: list = []
-        arg: List[str] = conversion_arg(sys.argv)
+        arg = conversion_arg(sys.argv)
         if len(arg) == 1:
             print("""
 prop <options> URL [URL...]
