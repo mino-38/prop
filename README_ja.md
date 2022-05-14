@@ -160,8 +160,7 @@ $ prop --purge-cache
 ```
 
 # 新機能
-- ログを少し変更
-- -n, --download-filenameオプションを追加
+- バグの修正
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
