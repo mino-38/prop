@@ -348,7 +348,7 @@ class parser:
             if dns:
                 try:
                     hostname = self.get_hostname(target_url)
-                    if not hostname in did_host:
+                    if hostname not in did_host:
                         if not hostname:
                             raise gaierror()
                         if self.option['debug']:
@@ -469,6 +469,9 @@ class parser:
                                             sleep(1)
                                             continue
                                 WebSiteData[from_url] = result
+                                if os.path.isdir('styles'):
+                                    with open(info_file, 'w') as f:
+                                        json.dump(WebSiteData, f, indent=4, ensure_ascii=False)
                         self.dl.option['formated'] = before_fmt
                     for from_url, target_url in tqdm(a_data.items(), leave=False, desc="'a tag'"):
                         for i in range(self.option['reconnect']+1):
@@ -492,6 +495,9 @@ class parser:
                                     result = self.dl.recursive_download(res.url, res.content, count)
                                     count += 1
                                     WebSiteData[from_url] = result
+                                    if os.path.isdir('styles'):
+                                        with open(info_file, 'w') as f:
+                                            json.dump(WebSiteData, f, indent=4, ensure_ascii=False)
                                 break
                             except Exception as e:
                                 if i >= self.option['reconnect']-1:
@@ -524,6 +530,9 @@ class parser:
                                     result = self.dl.recursive_download(res.url, res.content, count)
                                     count += 1
                                     WebSiteData[from_url] = result
+                                    if os.path.isdir('styles'):
+                                        with open(info_file, 'w') as f:
+                                            json.dump(WebSiteData, f, indent=4, ensure_ascii=False)
                                 break
                             except Exception as e:
                                 if i >= self.option['reconnect']-1:
@@ -1176,7 +1185,7 @@ def argument() -> (list, dict, logging.Logger.log):
             print("""
 prop <options> URL [URL...]
 
-\033[33mIf you want to see help message, please use '-h', '--help' options and you will see help""")
+\033[33mIf you want to see help message, please use '-h', '--help' options and you will see help\033[0m""")
             sys.exit(1)
         for n, args in enumerate(arg):
             if skip:
