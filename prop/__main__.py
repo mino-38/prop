@@ -104,11 +104,12 @@ class setting:
         """
         ./config.json(設定ファイル)をロード
         """
-        with open(setting.config_file, 'r') as f:
-            config = json.load(f)
-        if isinstance(config['timeout'], list):
-            config['timeout'] = tuple(config['timeout'])
-        self.options.update(config)
+        if os.path.isfile(setting.config_file):
+            with open(setting.config_file, 'r') as f:
+                config = json.load(f)
+            if isinstance(config['timeout'], list):
+                config['timeout'] = tuple(config['timeout'])
+            self.options.update(config)
 
     def config(self, key: str, value: str or bool or None) -> None:
         """
