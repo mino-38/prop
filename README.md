@@ -5,8 +5,22 @@ If you want to read README in Japanease, please read [this](https://github.com/m
 You can download files recursively, extract specific tags from html, etc.
 
 # Install
+If you have pip
 ```bash
 $ pip install prop-request
+```
+
+If you don't have pip
+```bash
+$ sudo wget https://github.com/mino-38/prop/releases/latest/download/prop -O /usr/local/bin/prop
+
+# or
+
+$ sudo curl -L https://github.com/mino-38/prop/releases/latest/download/prop -o /usr/local/bin/prop
+
+# After download binary file
+
+sudo chmod a+rx /usr/local/bin/prop
 ```
 
 # Usage
