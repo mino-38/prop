@@ -11,10 +11,12 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 from multiprocessing import Process
 from random import uniform
 from socket import gaierror
 from time import sleep
+from importlib.metadata import metadata
 from urllib.error import URLError
 from urllib.parse import unquote, urldefrag, urljoin, urlparse
 
@@ -34,7 +36,7 @@ except:
     import termios
 
 try:
-    import prop
+    metadata("prop-request")
     _binary = False
 except:
     _binary = True
@@ -1524,23 +1526,28 @@ def main() -> None:
         cache.update(option if isinstance(option, dict) else setting.options)
         sys.exit()
     elif '-U' in sys.argv or '--upgrade' in sys.argv:
-        try:
-            import prop
+        if _binary:
             subprocess.run(["pip", "install", "--upgrade", "prop-request"])
-        except:
+        else:
             res = requests.get("https://api.github.com/repos/mino-38/prop/releases", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl'])
             new_version = res.json()[0]["tag_name"]
             if VERSION < parse(new_version):
-                try:
-                    content = requests.get("https://github.com/mino-38/prop/releases/latest/download/prop", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl']).content
-                    with open(sys.argv[0], "wb") as f:
-                        f.write(content)
-                    print("Updated to version '{}'".format(new_version))
-                except PermissionError:
-                    print("\033[31mCan't open '{}'\nPlease try as root.\033[0m", file=sys.stderr)
-                    sys.exit(1)
-            else:
-                print("\033[33mUpdate is nothing.\033[0m")
+                with open(os.path.join(tempfile.gettempdir(), "prop-updater.bin"), "wb") as f, open(os.path.join(tempfile.gettempdir(), "prop-updater.sh"), "w") as s:
+                    f.write(requests.get("https://github.com/mino-38/prop/releases/latest/download/prop", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl']).content)
+                    s.write("""
+function on_error() {
+    echo -e "Faild update\nIf you run as root, this problem may solve"
+    exit 1
+}
+
+trap on_error ERR
+
+wait {pid}
+rm {old_file}
+mv {new_file} {old_file}
+rm {script}
+                """.format(pid=os.getpid(), old_file=sys.executable, new_file=f.name, script=s.name))
+                subprocess.Popen("sh {}".format(s.name), shell=True)
         sys.exit()
     for index, link in enumerate(url):
         if link == '-':
