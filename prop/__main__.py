@@ -21,6 +21,7 @@ from urllib.parse import unquote, urldefrag, urljoin, urlparse
 import requests
 from bs4 import BeautifulSoup as bs
 from fake_useragent import FakeUserAgentError, UserAgent
+from packaging.version import parse
 from requests.auth import HTTPBasicAuth
 from requests.packages import urllib3
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
@@ -39,6 +40,9 @@ pip install requests numpy beautifulsoup4 requests[socks] fake-useragent tqdm
 """
 
 urllib3.disable_warnings(InsecureRequestWarning)
+
+VERSION = parse("1.2.7")
+
 
 class error:
     @staticmethod
@@ -696,6 +700,8 @@ request urls: {0}
 
     def save(self, write, length, r):
         if write == tqdm.write:
+            if 1048576 <= int(length) and not self.ask_continue("The output will be large, but they will be printed to stdout.\nContinue?"):
+                return
             with tqdm(total=int(length) if length else None, unit="B", unit_scale=True) as p:
                 for b in r.iter_content(chunk_size=16384):
                     write(b.decode(errors='backslashreplace'), end='')
@@ -1379,7 +1385,7 @@ prop <options> URL [URL...]
                     error.print(f"{args} [string]\nPlease specify value of '{args}'")
             elif args == '-np' or args == '--no-parent':
                 option.config('noparent', True)
-            elif args in {'-nc', '-nb', '--no-content', '--no-body', '--update-cache'}:
+            elif args in {'-nc', '-nb', '--no-content', '--no-body', '--update-cache', '-U', '--upgrade'}:
                 continue
             elif args == '-M' or args == '--limit':
                 try:
@@ -1487,9 +1493,6 @@ prop <options> URL [URL...]
                 else:
                     print('No cache')
                 sys.exit()
-            elif args == "-U" or args == "--upgrade":
-                subprocess.run(["pip", "install", "--upgrade", "prop-request"])
-                sys.exit()
             else:
                 url.append(args)
         return url, option.fh.file, option.options
@@ -1498,6 +1501,25 @@ def main() -> None:
     url, log_file, option = argument()
     if '--update-cache' in sys.argv:
         cache.update(option if isinstance(option, dict) else setting.options)
+        sys.exit()
+    elif '-U' in sys.argv or '--upgrade' in sys.argv:
+        try:
+            import prop
+            subprocess.run(["pip", "install", "--upgrade", "prop-request"])
+        except:
+            res = requests.get("https://api.github.com/repos/mino-38/prop/releases", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl'])
+            new_version = res.json()[0]["tag_name"]
+            if VERSION < parse(new_version):
+                try:
+                    content = requests.get("https://github.com/mino-38/prop/releases/latest/download/prop", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl']).content
+                    with open(sys.argv[0], "wb") as f:
+                        f.write(content)
+                    print("Updated to version '{}'".format(new_version))
+                except PermissionError:
+                    print("\033[31mCan't open '{}'\nPlease try as root.\033[0m", file=sys.stderr)
+                    sys.exit(1)
+            else:
+                print("\033[33mUpdate is nothing.\033[0m")
         sys.exit()
     for index, link in enumerate(url):
         if link == '-':
