@@ -149,7 +149,7 @@ The -nc and -nb options cannot be used together.
 Use the -h and --help options to see help message.  
 Please refer to the help page, which includes the options listed here.
 
-# Where to save history, logs and cache and setting file
+# Where to save history, logs and cache
 You can see where the history is stored with --history-directory, where the logs are written with --log-file option, and where the cache is stored with --cache-directory.
 
 ```bash
@@ -176,9 +176,10 @@ $ prop --purge-history
 $ prop --purge-cache
 ````
 
-The path of setting file depends.
+# Where to setting file
+The path of setting file depends, but filename is same: "config.json"
 
-If you installed prop with pip, the path of setting file is the same place as place installed prop-request.
+If you installed prop with pip, the directory of setting file is the same place as the directory of prop-request.
 You can see it by "pip show prop-request" command.
 
 If you installed prop with binary file, the path of setting file is "~/.prop-datas/config.json"
