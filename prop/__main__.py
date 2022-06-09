@@ -33,6 +33,15 @@ try:
 except:
     import termios
 
+try:
+    import prop
+    _binary = False
+else:
+    _binary = True
+    _prop_directory = os.path.join(os.environ.get("HOME"), ".prop-datas")
+    if not os.path.isdir(_prop_directory):
+        os.mkdir(_prop_directory)
+
 """
 下記コマンド実行必要
 pip install requests numpy beautifulsoup4 requests[socks] fake-useragent tqdm
@@ -85,8 +94,14 @@ class setting:
     """
     オプション設定やファイルへのログを定義するクラス
     """
-    log_file = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'prop-log.log')
-    config_file = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), ".proprc")
+    if _binary:
+        log_file = os.path.join(_prop_directory, 'log.log')
+    else:
+        log_file = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'log.log')
+    if _binary:
+        config_file = os.path.join(_prop_directory, "config.json")
+    else:
+        config_file = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "config.json")
 
     def __init__(self):
         # 設定できるオプションたち
@@ -125,7 +140,10 @@ class cache:
     """
     キャッシュ(stylesheet)を扱うクラス
     """
-    root = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), '.prop-cache')
+    if _binary:
+        root = os.path.join(_prop_directory, 'cache')
+    else:
+        root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
     configfile = os.path.join(root, '.cache_info')
     if os.path.isfile(configfile):
         with open(configfile, 'r') as f:
@@ -184,7 +202,10 @@ class history:
     ダウンロード履歴関連の関数を定義するクラス
     基本的に./history配下のファイルのみ操作
     """
-    root = os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(sys.argv[0]))), '.prop-history')
+    if _binary:
+        root = os.path.join(_prop_directory, 'history')
+    else:
+        root = os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(sys.argv[0]))), 'history')
     def __init__(self, url: str):
         self.domain = urlparse(url).netloc
         self.history_file = os.path.join(history.root, self.domain+'.txt')
