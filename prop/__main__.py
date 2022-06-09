@@ -85,8 +85,8 @@ class setting:
     """
     オプション設定やファイルへのログを定義するクラス
     """
-    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'prop-log.log')
-    config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+    log_file = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'prop-log.log')
+    config_file = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), ".proprc")
 
     def __init__(self):
         # 設定できるオプションたち
@@ -106,7 +106,7 @@ class setting:
 
     def config_load(self) -> None:
         """
-        ./config.json(設定ファイル)をロード
+        設定ファイルをロード
         """
         if os.path.isfile(setting.config_file):
             with open(setting.config_file, 'r') as f:
@@ -125,7 +125,7 @@ class cache:
     """
     キャッシュ(stylesheet)を扱うクラス
     """
-    root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
+    root = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), '.prop-cache')
     configfile = os.path.join(root, '.cache_info')
     if os.path.isfile(configfile):
         with open(configfile, 'r') as f:
@@ -184,7 +184,7 @@ class history:
     ダウンロード履歴関連の関数を定義するクラス
     基本的に./history配下のファイルのみ操作
     """
-    root = os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(__file__))), 'history')
+    root = os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(sys.argv[0]))), '.prop-history')
     def __init__(self, url: str):
         self.domain = urlparse(url).netloc
         self.history_file = os.path.join(history.root, self.domain+'.txt')
