@@ -149,7 +149,7 @@ The -nc and -nb options cannot be used together.
 Use the -h and --help options to see help message.  
 Please refer to the help page, which includes the options listed here.
 
-# Where to save history, logs, and cache
+# Where to save history, logs and cache and setting file
 You can see where the history is stored with --history-directory, where the logs are written with --log-file option, and where the cache is stored with --cache-directory.
 
 ```bash
@@ -176,14 +176,15 @@ $ prop --purge-history
 $ prop --purge-cache
 ````
 
-# New feature
-- Name of history directory, cache directory, and setting file were changed.
+The path of setting file depends.
 
-|  old name  |  new name  |
-|  ---  |  ---  |
-|  history  |  .prop-history  |
-|  cache  |  .prop-cache  |
-|  config.json  |  .proprc  |
+If you installed prop with pip, the path of setting file is the same place as place installed prop-request.
+You can see it by "pip show prop-request" command.
+
+If you installed prop with binary file, the path of setting file is "~/.prop-datas/config.json"
+
+# New feature
+- When the output will be printed to stdout and size of the output is large, ask whether you want to continue.
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).
