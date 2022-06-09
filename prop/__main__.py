@@ -36,7 +36,7 @@ except:
 try:
     import prop
     _binary = False
-else:
+except:
     _binary = True
     _prop_directory = os.path.join(os.environ.get("HOME"), ".prop-datas")
     if not os.path.isdir(_prop_directory):
