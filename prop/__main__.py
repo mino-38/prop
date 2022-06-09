@@ -1545,8 +1545,9 @@ trap on_error ERR
 wait {pid}
 rm {old_file}
 mv {new_file} {old_file}
+echo "Updated to version '{version}'"
 rm {script}
-                """.format(pid=os.getpid(), old_file=sys.executable, new_file=f.name, script=s.name))
+                """.format(pid=os.getpid(), old_file=sys.executable, new_file=f.name, script=s.name, version=new_version))
                 subprocess.Popen("sh {}".format(s.name), shell=True)
         sys.exit()
     for index, link in enumerate(url):
