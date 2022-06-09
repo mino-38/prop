@@ -143,7 +143,7 @@ class cache:
     if _binary:
         root = os.path.join(_prop_directory, 'cache')
     else:
-        root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cache')
+        root = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'cache')
     configfile = os.path.join(root, '.cache_info')
     if os.path.isfile(configfile):
         with open(configfile, 'r') as f:
@@ -205,7 +205,7 @@ class history:
     if _binary:
         root = os.path.join(_prop_directory, 'history')
     else:
-        root = os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(sys.argv[0]))), 'history')
+        root = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'history')
     def __init__(self, url: str):
         self.domain = urlparse(url).netloc
         self.history_file = os.path.join(history.root, self.domain+'.txt')
