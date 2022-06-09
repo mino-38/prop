@@ -177,7 +177,13 @@ $ prop --purge-cache
 ````
 
 # New feature
-- Fixed a few bugs.
+- Name of history directory, cache directory, and setting file were changed.
+
+|  old name  |  new name  |
+|  ---  |  ---  |
+|  history  |  .prop-history  |
+|  cache  |  .prop-cache  |
+|  config.json  |  .proprc  |
 
 # License
 [MIT license](https://github.com/mino-38/prop/blob/main/LICENSE).
