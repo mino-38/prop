@@ -1,0 +1,30 @@
+{
+    "types": "get",
+    "timeout": [3.0, 60.0],
+    "redirect": true,
+    "search": false,
+    "only_body": false,
+    "header": {
+        "User-Agent": "Prop/1.0.0"
+    },
+    "cookie": null,
+    "proxy": null,
+    "auth": null,
+    "recursive": 0,
+    "body": true,
+    "content": true,
+    "conversion": true,
+    "reconnect": 5,
+    "caperror": true,
+    "noparent": false,
+    "no_downloaded": false,
+    "log": true,
+    "interval": 1,
+    "format": "%(file)s",
+    "info": false,
+    "multiprocess": false,
+    "ssl": true,
+    "parser": "html.parser",
+    "no_dl_external": true,
+    "save_robots": true
+}
