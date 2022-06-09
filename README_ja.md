@@ -2,8 +2,22 @@
 ファイルの再帰ダウンロードやhtmlから特定のタグなどを抽出することができます
 
 # インストール
+pipが既にインストールされて使える方
 ```bash
 $ pip install prop-request
+```
+
+pipなんてないよーって方(現時点ではLinux用のバイナリしかありません……)
+```bash
+# wgetバージョン
+$ sudo wget https://github.com/mino-38/prop/releases/latest/download/prop -O /usr/local/bin/prop
+
+# curlバージョン
+$ sudo curl -L https://github.com/mino-38/prop/releases/latest/download/prop -o /usr/local/bin/prop
+
+# 以上のいずれかの方法でバイナリファイルをダウンロードしたら以下のコマンドで権限を付与してください
+
+sudo chmod a+rx /usr/local/bin/prop
 ```
 
 # 基本的な使い方
