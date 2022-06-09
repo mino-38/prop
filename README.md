@@ -177,6 +177,7 @@ $ prop --purge-cache
 ````
 
 # Where to setting file
+By changing content of setting file, you can set proxy, timeout, and so on. (This setting is globally.)
 The path of setting file depends, but filename is same: "config.json"
 
 If you installed prop with pip, the directory of setting file is the same place as the directory of prop-request.
