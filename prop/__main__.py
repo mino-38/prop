@@ -98,12 +98,10 @@ class setting:
     """
     if _binary:
         log_file = os.path.join(_prop_directory, 'log.log')
+        config_file = os.path.join(_prop_directory, 'config.json')
     else:
         log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'log.log')
-    if _binary:
-        config_file = os.path.join(_prop_directory, "config.json")
-    else:
-        config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config.json")
+        config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
 
     def __init__(self):
         # 設定できるオプションたち
