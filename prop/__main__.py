@@ -1091,6 +1091,9 @@ This option doesn't work properly if you delete the files under the {history_dir
 
 -----The following special options-----
 
+-V, --version
+Show the version that you are using
+
 --purge-log
 Remove log file
 
@@ -1217,13 +1220,16 @@ def argument() -> (list, dict, logging.Logger.log):
 prop <options> URL [URL...]
 
 \033[33mIf you want to see help message, please use '-h', '--help' options and you will see help\033[0m""")
-            sys.exit(1)
+            sys.exit()
         for n, args in enumerate(arg):
             if skip:
                 skip -= 1
                 continue
             if args == '-h' or args == '--help':
                 help()
+                sys.exit()
+            elif args == '-V' or args == '--version':
+                print(str(VERSION))
                 sys.exit()
             elif args == '-o' or args == '--output':
                 # 出力先ファイルの設定
@@ -1546,7 +1552,7 @@ chmod a+rx %(bin_file)s
 echo "Updated to version '%(version)s'"
 rm %(script)s
                 """ % {"bin_file": sys.executable, "new_file": f.name, "script": s.name, "version": new_version})
-                subprocess.Popen(". {}".format(s.name), shell=True, close_fds=True)
+                subprocess.Popen("bash {}".format(s.name), shell=True, close_fds=True)
         else:
             subprocess.run(["pip", "install", "--upgrade", "prop-request"])
         sys.exit()
