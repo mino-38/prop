@@ -1542,10 +1542,11 @@ function on_error () {
 
 trap on_error ERR
 
-mv %(new_file)s %(old_file)s
+mv %(new_file)s %(bin_file)s
+chmod a+rx %(bin_file)s
 echo "Updated to version '%(version)s'"
 rm %(script)s
-                """ % {"pid": os.getpid(), "old_file": sys.executable, "new_file": f.name, "script": s.name, "version": new_version})
+                """ % {"pid": os.getpid(), "bin_file": sys.executable, "new_file": f.name, "script": s.name, "version": new_version})
                 subprocess.Popen("sh {}".format(s.name), shell=True, close_fds=True)
         sys.exit()
     for index, link in enumerate(url):
