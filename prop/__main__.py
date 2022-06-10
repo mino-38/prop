@@ -1547,7 +1547,7 @@ chmod a+rx %(bin_file)s
 echo "Updated to version '%(version)s'"
 rm %(script)s
                 """ % {"bin_file": sys.executable, "new_file": f.name, "script": s.name, "version": new_version})
-                subprocess.Popen("source {}".format(s.name), shell=True, close_fds=True)
+                subprocess.Popen(". {}".format(s.name), shell=True, close_fds=True)
         sys.exit()
     for index, link in enumerate(url):
         if link == '-':
