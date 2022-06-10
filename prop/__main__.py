@@ -1535,7 +1535,7 @@ def main() -> None:
                 with open(os.path.join(tempfile.gettempdir(), "prop-updater.bin"), "wb") as f, open(os.path.join(tempfile.gettempdir(), "prop-updater.sh"), "w") as s:
                     f.write(requests.get("https://github.com/mino-38/prop/releases/latest/download/prop", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl']).content)
                     s.write("""
-function on_error() {
+function on_error () {
     echo -e "Faild update\\nIf you run as root, this problem may solve"
     exit 1
 }
