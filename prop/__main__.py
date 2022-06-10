@@ -723,8 +723,11 @@ request urls: {0}
 
     def save(self, write, length, r):
         if write == tqdm.write:
-            if 1048576 <= int(length) and not self.ask_continue("The output will be large, but they will be printed to stdout.\nContinue?"):
-                return
+            try:
+                if 1048576 <= int(length) and not self.ask_continue("The output will be large, but they will be printed to stdout.\nContinue?"):
+                    return
+            except:
+                pass
             with tqdm(total=int(length) if length else None, unit="B", unit_scale=True) as p:
                 for b in r.iter_content(chunk_size=16384):
                     write(b.decode(errors='backslashreplace'), end='')
