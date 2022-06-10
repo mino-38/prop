@@ -11,10 +11,12 @@ import shutil
 import socket
 import subprocess
 import sys
+import tempfile
 from multiprocessing import Process
 from random import uniform
 from socket import gaierror
 from time import sleep
+from importlib.metadata import metadata
 from urllib.error import URLError
 from urllib.parse import unquote, urldefrag, urljoin, urlparse
 
@@ -34,7 +36,7 @@ except:
     import termios
 
 try:
-    import prop
+    metadata("prop-request")
     _binary = False
 except:
     _binary = True
@@ -96,12 +98,10 @@ class setting:
     """
     if _binary:
         log_file = os.path.join(_prop_directory, 'log.log')
+        config_file = os.path.join(_prop_directory, 'config.json')
     else:
-        log_file = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), 'log.log')
-    if _binary:
-        config_file = os.path.join(_prop_directory, "config.json")
-    else:
-        config_file = os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "config.json")
+        log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'log.log')
+        config_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'config.json')
 
     def __init__(self):
         # 設定できるオプションたち
@@ -205,7 +205,7 @@ class history:
     if _binary:
         root = os.path.join(_prop_directory, 'history')
     else:
-        root = os.path.join(os.path.abspath(os.path.dirname(os.path.abspath(sys.argv[0]))), 'history')
+        root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'history')
     def __init__(self, url: str):
         self.domain = urlparse(url).netloc
         self.history_file = os.path.join(history.root, self.domain+'.txt')
@@ -721,8 +721,11 @@ request urls: {0}
 
     def save(self, write, length, r):
         if write == tqdm.write:
-            if 1048576 <= int(length) and not self.ask_continue("The output will be large, but they will be printed to stdout.\nContinue?"):
-                return
+            try:
+                if 1048576 <= int(length) and not self.ask_continue("The output will be large, but they will be printed to stdout.\nContinue?"):
+                    return
+            except:
+                pass
             with tqdm(total=int(length) if length else None, unit="B", unit_scale=True) as p:
                 for b in r.iter_content(chunk_size=16384):
                     write(b.decode(errors='backslashreplace'), end='')
@@ -1088,6 +1091,9 @@ This option doesn't work properly if you delete the files under the {history_dir
 
 -----The following special options-----
 
+-V, --version
+Show the version that you are using
+
 --purge-log
 Remove log file
 
@@ -1214,13 +1220,16 @@ def argument() -> (list, dict, logging.Logger.log):
 prop <options> URL [URL...]
 
 \033[33mIf you want to see help message, please use '-h', '--help' options and you will see help\033[0m""")
-            sys.exit(1)
+            sys.exit()
         for n, args in enumerate(arg):
             if skip:
                 skip -= 1
                 continue
             if args == '-h' or args == '--help':
                 help()
+                sys.exit()
+            elif args == '-V' or args == '--version':
+                print(str(VERSION))
                 sys.exit()
             elif args == '-o' or args == '--output':
                 # 出力先ファイルの設定
@@ -1524,23 +1533,28 @@ def main() -> None:
         cache.update(option if isinstance(option, dict) else setting.options)
         sys.exit()
     elif '-U' in sys.argv or '--upgrade' in sys.argv:
-        try:
-            import prop
-            subprocess.run(["pip", "install", "--upgrade", "prop-request"])
-        except:
+        if _binary:
             res = requests.get("https://api.github.com/repos/mino-38/prop/releases", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl'])
             new_version = res.json()[0]["tag_name"]
             if VERSION < parse(new_version):
-                try:
-                    content = requests.get("https://github.com/mino-38/prop/releases/latest/download/prop", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl']).content
-                    with open(sys.argv[0], "wb") as f:
-                        f.write(content)
-                    print("Updated to version '{}'".format(new_version))
-                except PermissionError:
-                    print("\033[31mCan't open '{}'\nPlease try as root.\033[0m", file=sys.stderr)
-                    sys.exit(1)
-            else:
-                print("\033[33mUpdate is nothing.\033[0m")
+                with open(os.path.join(tempfile.gettempdir(), "prop-updater.bin"), "wb") as f, open(os.path.join(tempfile.gettempdir(), "prop-updater.sh"), "w") as s:
+                    f.write(requests.get("https://github.com/mino-38/prop/releases/latest/download/prop", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl']).content)
+                    s.write("""
+function on_error () {
+    echo -e "\\n\\033[33mFaild update\\nIf you run as root, this problem may solve\\033[0m"
+    exit 1
+}
+
+trap on_error ERR
+
+mv %(new_file)s %(bin_file)s
+chmod a+rx %(bin_file)s
+echo "Updated to version '%(version)s'"
+rm %(script)s
+                """ % {"bin_file": sys.executable, "new_file": f.name, "script": s.name, "version": new_version})
+                subprocess.Popen("bash {}".format(s.name), shell=True, close_fds=True)
+        else:
+            subprocess.run(["pip", "install", "--upgrade", "prop-request"])
         sys.exit()
     for index, link in enumerate(url):
         if link == '-':

@@ -146,7 +146,7 @@ $ prop -r -f "test-%(num)d.%(ext)s" -o store_ directory URL
 -h, --helpオプションを使用するとヘルプが表示されます  
 ここに載っているオプションも含めて説明しているので、そちらをご覧ください
 
-# 履歴、ログの保存先
+# 履歴、キャッシュ、ログの保存先
 履歴の保存場所は--history-directory、ログの書き込み先は--log-fileオプション、キャッシュの保存場所は--cache-directoryで見ることができます
 
 ```bash
@@ -173,8 +173,17 @@ $ prop --purge-history
 $ prop --purge-cache
 ```
 
+# 設定ファイルの場所
+設定ファイルを使用することで、プロキシやタイムアウトの時間などをカスタマイズ出来るようになります(この設定はグローバルです)
+設定ファイルの場所はインストール方法によって異なります
+
+pipでインストールした場合、設定ファイルはprop-requestのディレクトリに含まれます
+prop-requestのディレクトリは"pip show prop-request"のLocationに表示されているディレクトリに含まれます
+
+バイナリをダウンロードした場合、設定ファイルは~/.prop-datas/config.jsonにあります
+
 # 新機能
-- バグの修正
+- データが標準出力に出力されるとき、サイズが大きい(1MB以上)ときに警告文を表示するようにしました
 
 # ライセンス
 [MITライセンス](https://github.com/mino-38/prop/blob/main/LICENSE)です
