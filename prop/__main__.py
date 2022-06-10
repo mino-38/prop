@@ -1528,8 +1528,6 @@ def main() -> None:
         sys.exit()
     elif '-U' in sys.argv or '--upgrade' in sys.argv:
         if _binary:
-            subprocess.run(["pip", "install", "--upgrade", "prop-request"])
-        else:
             res = requests.get("https://api.github.com/repos/mino-38/prop/releases", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl'])
             new_version = res.json()[0]["tag_name"]
             if VERSION < parse(new_version):
@@ -1549,6 +1547,8 @@ echo "Updated to version '%(version)s'"
 rm %(script)s
                 """ % {"bin_file": sys.executable, "new_file": f.name, "script": s.name, "version": new_version})
                 subprocess.Popen(". {}".format(s.name), shell=True, close_fds=True)
+        else:
+            subprocess.run(["pip", "install", "--upgrade", "prop-request"])
         sys.exit()
     for index, link in enumerate(url):
         if link == '-':
