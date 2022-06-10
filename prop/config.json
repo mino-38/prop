@@ -5,7 +5,7 @@
     "search": false,
     "only_body": false,
     "header": {
-        "User-Agent": "Prop/1.0.0"
+        "User-Agent": "Prop/1.2.8"
     },
     "cookie": null,
     "proxy": null,
