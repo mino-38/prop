@@ -1541,7 +1541,7 @@ def main() -> None:
                     f.write(requests.get("https://github.com/mino-38/prop/releases/latest/download/prop", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl']).content)
                     s.write("""
 function on_error () {
-    echo -e "\\033[33mFaild update\\n\\nIf you run as root, this problem may solve\\033[0m"
+    echo -e "\\n\\033[33mFaild update\\nIf you run as root, this problem may solve\\033[0m"
     exit 1
 }
 
