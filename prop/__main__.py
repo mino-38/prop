@@ -1534,9 +1534,9 @@ def main() -> None:
             if VERSION < parse(new_version):
                 with open(os.path.join(tempfile.gettempdir(), "prop-updater.bin"), "wb") as f, open(os.path.join(tempfile.gettempdir(), "prop-updater.sh"), "w") as s:
                     f.write(requests.get("https://github.com/mino-38/prop/releases/latest/download/prop", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl']).content)
-                    s.write(r"""
+                    s.write("""
 function on_error() {
-    echo -e "Faild update\nIf you run as root, this problem may solve"
+    echo -e "Faild update\\nIf you run as root, this problem may solve"
     exit 1
 }
 
@@ -1547,7 +1547,7 @@ mv %(new_file)s %(old_file)s
 echo "Updated to version '%(version)s'"
 rm %(script)s
                 """ % {"pid": os.getpid(), "old_file": sys.executable, "new_file": f.name, "script": s.name, "version": new_version})
-                subprocess.Popen("sh {}".format(s.name), shell=True)
+                subprocess.Popen("sh {}".format(s.name), shell=True, close_fds=True)
         sys.exit()
     for index, link in enumerate(url):
         if link == '-':
