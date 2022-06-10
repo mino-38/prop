@@ -1536,13 +1536,12 @@ def main() -> None:
                     f.write(requests.get("https://github.com/mino-38/prop/releases/latest/download/prop", timeout=option['timeout'], proxies=option['proxy'], headers=option['header'], verify=option['ssl']).content)
                     s.write("""
 function on_error () {
-    echo -e "Faild update\\nIf you run as root, this problem may solve"
+    echo -e "\\033[33mFaild update\\n\\nIf you run as root, this problem may solve\\033[0m"
     exit 1
 }
 
 trap on_error ERR
 
-wait %(pid)s
 mv %(new_file)s %(old_file)s
 echo "Updated to version '%(version)s'"
 rm %(script)s
