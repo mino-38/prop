@@ -52,7 +52,7 @@ pip install requests numpy beautifulsoup4 requests[socks] fake-useragent tqdm
 
 urllib3.disable_warnings(InsecureRequestWarning)
 
-VERSION = parse("1.2.7")
+VERSION = parse("1.2.8")
 
 
 class error:
@@ -1553,6 +1553,8 @@ echo "Updated to version '%(version)s'"
 rm %(script)s
                 """ % {"bin_file": sys.executable, "new_file": f.name, "script": s.name, "version": new_version})
                 subprocess.Popen("bash {}".format(s.name), shell=True, close_fds=True)
+            else:
+                print("Update is nothing")
         else:
             subprocess.run(["pip", "install", "--upgrade", "prop-request"])
         sys.exit()
