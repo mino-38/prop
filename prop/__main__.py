@@ -1550,7 +1550,7 @@ trap on_error ERR
 mv -f %(new_file)s %(bin_file)s
 chmod a+rx %(bin_file)s
 echo "Updated to version '%(version)s'"
-rm %(script)s
+rm -f %(script)s
                 """ % {"bin_file": sys.executable, "new_file": f.name, "script": s.name, "version": new_version})
                 subprocess.Popen("bash {}".format(s.name), shell=True, close_fds=True)
             else:
