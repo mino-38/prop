@@ -1547,7 +1547,7 @@ function on_error () {
 
 trap on_error ERR
 
-mv %(new_file)s %(bin_file)s
+mv -f %(new_file)s %(bin_file)s
 chmod a+rx %(bin_file)s
 echo "Updated to version '%(version)s'"
 rm %(script)s
