@@ -605,9 +605,9 @@ class downloader:
         instance: requests = methods.get(self.option['types'])
         if self.option['debug']:
             self.log(20, """
-request urls: {0}
+request urls: {}
 \033[35m[settings]\033[0m
-{1}
+{}
             """.format(self.url, '\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in self.option.items()])))
         for url in self.url:
             try:
@@ -747,7 +747,7 @@ request urls: {0}
                 tqdm.write(h.url)
                 tqdm.write('↓')
             tqdm.write(response.url)
-        tqdm.write('\033[35m[cookies]\033[0m\n')
+        tqdm.write('\n\033[35m[cookies]\033[0m\n')
         if not response.cookies:
             tqdm.write('-')
         else:
