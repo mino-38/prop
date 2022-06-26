@@ -207,7 +207,7 @@ class history:
     else:
         root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'history')
     def __init__(self, url: str):
-        self.domain = urlparse(url).netloc
+        self.domain = urlparse(url).hostname
         self.history_file = os.path.join(history.root, self.domain+'.txt')
         if not os.path.isdir(history.root):
             os.mkdir(history.root)
@@ -706,6 +706,7 @@ request urls: {}
                     f.write(r.content)
         else:
             self.save(tqdm.write, length, r)
+        h.write(r.url)
 
     def get_fmt(self, r):
         if self.option['filename']:
