@@ -740,7 +740,7 @@ request urls: {}
     def _print(self, response, output=None, file=None) -> None:
         if file:
             sys.stdout = open(file, 'w')
-        tqdm.write('\n\033[35m[histories of redirect]\033[0m\n')
+        tqdm.write('\n\033[35m[histories of redirect]\033[0m')
         if not response.history:
             tqdm.write('-')
         else:
@@ -748,13 +748,13 @@ request urls: {}
                 tqdm.write(h.url)
                 tqdm.write('↓')
             tqdm.write(response.url)
-        tqdm.write('\n\033[35m[cookies]\033[0m\n')
+        tqdm.write('\n\033[35m[cookies]\033[0m')
         if not response.cookies:
             tqdm.write('-')
         else:
             for c in response.cookies:
                 tqdm.write(f'\033[34m{c.name}\033[0m: {c.value}')
-        tqdm.write('\n\033[35m[response headers]\033[0m\n')
+        tqdm.write('\n\033[35m[response headers]\033[0m')
         for i in output:
             if isinstance(i, (str, bytes)):
                 tqdm.write(str(i), end='')
