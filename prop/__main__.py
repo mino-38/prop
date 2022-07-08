@@ -897,8 +897,10 @@ def tor(port=9050):
 def help() -> None:
     print("""
 <usage>
-prop <option> URL [URL...]
-if you want to read the URL from standard input, please use '-' instead of URL
+
+$ prop <option> URL [URL...]
+
+If you want to read the URL from standard input, please use '-' instead of URL
 
 <List of options>
 -o, --output [file path]
@@ -909,7 +911,7 @@ Default setting is standard output
 Download with the same name as the download source file name
 
 -i, --ignore
-Even if set timeout, it ignore
+Even if set timeout, it will be ignored
 
 -t, --timeout [timeout time (number)]
 Set the timeout time
@@ -919,7 +921,7 @@ Also, the -i option takes precedence over this option
 -x, --method [method]
 Communicate by specifying the communication method
 The default is get
-Communication that can be specified with -x, --method option
+Communication that can be specified with -x, --method option is bellow
 
 - get
 - post
@@ -932,7 +934,9 @@ Ignore SSL certificate validation
 -d, --data param1=value1 param2=value2 
 Specify the data and parameters to send
 Specify as follows
-prop -d q=hogehoge hl=fugafuga URL
+
+$ prop -d q=hogehoge hl=fugafuga URL
+
 Please specify the -j option when sending in json format
 
 -j, --json
@@ -955,6 +959,7 @@ Specify the proxy to use for communication
 It use tor as a proxy
 If you omit the port number, 9050 will be used
 And, there are some things you need to do before using this option
+
 Windows:
 Just run tor.exe
 
@@ -967,24 +972,26 @@ Please enter the following command to start tor
 $ sudo service tor start
 
 -F, --information
-Outputs only status code, redirect history, cookie information, response header information
-If you have specified this option and want to output to a file, use> (redirect) instead of the -o option
+Output status code, redirect histories, cookie informations and response header informations
 
 -s, --search-words [words]
 Extracts and outputs the code such as the specified tag, class, id, etc. from the source code of the site
 If you specify more than one, separate them with ',' (don't use a space)
 Example of use
-prop -s tags=a,img,script class=test [URL]
+
+$ prop -s tags=a,img,script class=test [URL]
 
 >>> Extract and display the code of a tag, img tag, and script tag from the test class
 
 Also, if limit=number or use -M, --limit option, only the specified number will be extracted
 Example of use
-prop -s tags=a limit=2 [URL]
+
+$ prop -s tags=a limit=2 [URL]
 
 >>> Extract a tag from the top to the second
 
 Below is an example of attribute specification (there are others)
+
 class=class name
 id=id
 text=Contents of tag(character string)
@@ -994,7 +1001,7 @@ src=reference
 
 And, you can also use the css selector without using the above
 
-prop -s "a, script" [URL]
+$ prop -s "a, script" [URL]
 
 -Y, --only-body
 Show the only body if contents are html
@@ -1004,7 +1011,7 @@ Show the only body if contents are html
 Specify the number of '-s', '--search' result or the number of recursive download files (-r, --recursive option)
 
 -e, --no-catch-error
-No output even if an error occurs
+No output error message even if an error occurs
 
 -R, --read-file [file path]
 Reads the URL to download from the specified file
@@ -1054,11 +1061,11 @@ If "%(file)s" or "%(num)d" aren't included in the character string, it won't be 
 
 Ex: Suppose there are text links https://example.com/2.html and https://example.com/3.html in https://example.com
 
-prop -r -f "%(num)d-%(root)s-%(file)s" https://example.com
+$ prop -r -f "%(num)d-%(root)s-%(file)s" https://example.com
 
 >>> https://example.com saved as 0-example.com, http://example.com/2 saved as 1-example.com-2.html, http://example.com/3 saved as 2-example.com-3.html
 
-prop -r -f "%(num)d.%(ext)s" https://www.example.com
+$ prop -r -f "%(num)d.%(ext)s" https://www.example.com
 
 >>> https://example.com saved as 0.html, https://example.com/2.html saved as 1.html, https://example.com/3.html saved as 2.html
 
