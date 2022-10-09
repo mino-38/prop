@@ -52,8 +52,15 @@ pip install requests numpy beautifulsoup4 requests[socks] fake-useragent tqdm
 
 urllib3.disable_warnings(InsecureRequestWarning)
 
-VERSION = parse("1.2.7")
+VERSION = parse("1.2.8")
 
+
+_open = open
+
+def open(*args, **kwargs):
+    if 'wb' not in args and 'rb' not in args:
+        kwargs['encoding'] = 'utf-8'
+    return _open(*args, **kwargs)
 
 class error:
     @staticmethod
@@ -207,7 +214,7 @@ class history:
     else:
         root = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'history')
     def __init__(self, url: str):
-        self.domain = urlparse(url).netloc
+        self.domain = urlparse(url).hostname
         self.history_file = os.path.join(history.root, self.domain+'.txt')
         if not os.path.isdir(history.root):
             os.mkdir(history.root)
@@ -605,9 +612,9 @@ class downloader:
         instance: requests = methods.get(self.option['types'])
         if self.option['debug']:
             self.log(20, """
-request urls: {0}
+request urls: {}
 \033[35m[settings]\033[0m
-{1}
+{}
             """.format(self.url, '\n'.join([f'\033[34m{k}\033[0m: {v}' for k, v in self.option.items()])))
         for url in self.url:
             try:
@@ -706,6 +713,7 @@ request urls: {0}
                     f.write(r.content)
         else:
             self.save(tqdm.write, length, r)
+        h.write(r.url)
 
     def get_fmt(self, r):
         if self.option['filename']:
@@ -739,7 +747,7 @@ request urls: {0}
     def _print(self, response, output=None, file=None) -> None:
         if file:
             sys.stdout = open(file, 'w')
-        tqdm.write('\n\033[35m[histories of redirect]\033[0m\n')
+        tqdm.write('\n\033[35m[histories of redirect]\033[0m')
         if not response.history:
             tqdm.write('-')
         else:
@@ -747,13 +755,13 @@ request urls: {0}
                 tqdm.write(h.url)
                 tqdm.write('↓')
             tqdm.write(response.url)
-        tqdm.write('\033[35m[cookies]\033[0m\n')
+        tqdm.write('\n\033[35m[cookies]\033[0m')
         if not response.cookies:
             tqdm.write('-')
         else:
             for c in response.cookies:
                 tqdm.write(f'\033[34m{c.name}\033[0m: {c.value}')
-        tqdm.write('\n\033[35m[response headers]\033[0m\n')
+        tqdm.write('\n\033[35m[response headers]\033[0m')
         for i in output:
             if isinstance(i, (str, bytes)):
                 tqdm.write(str(i), end='')
@@ -853,34 +861,10 @@ request urls: {0}
                     else:
                         break
 
-    if platform.system() == 'Windows':
-        def receive(self):
-            result = msvcrt.getch()
-            return str(result).lower()
-    else:
-        def receive(self):
-            fd = sys.stdin.fileno()
-            old = termios.tcgetattr(fd)
-            new = termios.tcgetattr(fd)
-            new[3] &= ~termios.ICANON
-            new[3] &= ~termios.ECHO
-            try:
-                termios.tcsetattr(fd, termios.TCSANOW, new)
-                result = sys.stdin.read(1).lower()
-            finally:
-                termios.tcsetattr(fd, termios.TCSANOW, old)
-            return result
-
     def ask_continue(self, msg) -> bool:
         while True:
-            tqdm.write(f'{msg}[y/N]\n')
-            res = ''
-            answer = self.receive()
-            while answer != '\n':
-                res += answer
-                tqdm.write(answer, end='')
-                sys.stdout.flush()
-                answer = self.receive()
+            print(f'{msg}[y/N]:  ', file=sys.stderr, end='')
+            answer = sys.stdin.readline()
             if res in {'y', 'n', 'yes', 'no'}:
                 break
             print('\033[1A\r', end='')
@@ -896,8 +880,10 @@ def tor(port=9050):
 def help() -> None:
     print("""
 <usage>
-prop <option> URL [URL...]
-if you want to read the URL from standard input, please use '-' instead of URL
+
+$ prop <option> URL [URL...]
+
+If you want to read the URL from standard input, please use '-' instead of URL
 
 <List of options>
 -o, --output [file path]
@@ -908,7 +894,7 @@ Default setting is standard output
 Download with the same name as the download source file name
 
 -i, --ignore
-Even if set timeout, it ignore
+Even if set timeout, it will be ignored
 
 -t, --timeout [timeout time (number)]
 Set the timeout time
@@ -918,7 +904,7 @@ Also, the -i option takes precedence over this option
 -x, --method [method]
 Communicate by specifying the communication method
 The default is get
-Communication that can be specified with -x, --method option
+Communication that can be specified with -x, --method option is bellow
 
 - get
 - post
@@ -931,7 +917,9 @@ Ignore SSL certificate validation
 -d, --data param1=value1 param2=value2 
 Specify the data and parameters to send
 Specify as follows
-prop -d q=hogehoge hl=fugafuga URL
+
+$ prop -d q=hogehoge hl=fugafuga URL
+
 Please specify the -j option when sending in json format
 
 -j, --json
@@ -954,6 +942,7 @@ Specify the proxy to use for communication
 It use tor as a proxy
 If you omit the port number, 9050 will be used
 And, there are some things you need to do before using this option
+
 Windows:
 Just run tor.exe
 
@@ -966,24 +955,26 @@ Please enter the following command to start tor
 $ sudo service tor start
 
 -F, --information
-Outputs only status code, redirect history, cookie information, response header information
-If you have specified this option and want to output to a file, use> (redirect) instead of the -o option
+Output status code, redirect histories, cookie informations and response header informations
 
 -s, --search-words [words]
 Extracts and outputs the code such as the specified tag, class, id, etc. from the source code of the site
 If you specify more than one, separate them with ',' (don't use a space)
 Example of use
-prop -s tags=a,img,script class=test [URL]
+
+$ prop -s tags=a,img,script class=test [URL]
 
 >>> Extract and display the code of a tag, img tag, and script tag from the test class
 
 Also, if limit=number or use -M, --limit option, only the specified number will be extracted
 Example of use
-prop -s tags=a limit=2 [URL]
+
+$ prop -s tags=a limit=2 [URL]
 
 >>> Extract a tag from the top to the second
 
 Below is an example of attribute specification (there are others)
+
 class=class name
 id=id
 text=Contents of tag(character string)
@@ -993,7 +984,7 @@ src=reference
 
 And, you can also use the css selector without using the above
 
-prop -s "a, script" [URL]
+$ prop -s "a, script" [URL]
 
 -Y, --only-body
 Show the only body if contents are html
@@ -1003,7 +994,7 @@ Show the only body if contents are html
 Specify the number of '-s', '--search' result or the number of recursive download files (-r, --recursive option)
 
 -e, --no-catch-error
-No output even if an error occurs
+No output error message even if an error occurs
 
 -R, --read-file [file path]
 Reads the URL to download from the specified file
@@ -1053,11 +1044,11 @@ If "%(file)s" or "%(num)d" aren't included in the character string, it won't be 
 
 Ex: Suppose there are text links https://example.com/2.html and https://example.com/3.html in https://example.com
 
-prop -r -f "%(num)d-%(root)s-%(file)s" https://example.com
+$ prop -r -f "%(num)d-%(root)s-%(file)s" https://example.com
 
 >>> https://example.com saved as 0-example.com, http://example.com/2 saved as 1-example.com-2.html, http://example.com/3 saved as 2-example.com-3.html
 
-prop -r -f "%(num)d.%(ext)s" https://www.example.com
+$ prop -r -f "%(num)d.%(ext)s" https://www.example.com
 
 >>> https://example.com saved as 0.html, https://example.com/2.html saved as 1.html, https://example.com/3.html saved as 2.html
 
@@ -1547,12 +1538,14 @@ function on_error () {
 
 trap on_error ERR
 
-mv %(new_file)s %(bin_file)s
+mv -f %(new_file)s %(bin_file)s
 chmod a+rx %(bin_file)s
 echo "Updated to version '%(version)s'"
-rm %(script)s
+rm -f %(script)s
                 """ % {"bin_file": sys.executable, "new_file": f.name, "script": s.name, "version": new_version})
                 subprocess.Popen("bash {}".format(s.name), shell=True, close_fds=True)
+            else:
+                print("Update is nothing")
         else:
             subprocess.run(["pip", "install", "--upgrade", "prop-request"])
         sys.exit()
