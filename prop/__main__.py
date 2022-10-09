@@ -863,7 +863,7 @@ request urls: {}
 
     def ask_continue(self, msg) -> bool:
         while True:
-            print(f'{msg}[y/N]', file=sys.stderr, end='')
+            print(f'{msg}[y/N]:  ', file=sys.stderr, end='')
             answer = sys.stdin.readline()
             if res in {'y', 'n', 'yes', 'no'}:
                 break
