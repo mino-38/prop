@@ -58,7 +58,8 @@ VERSION = parse("1.2.8")
 _open = open
 
 def open(*args, **kwargs):
-    kwargs['encoding'] = 'utf-8'
+    if 'wb' not in args and 'rb' not in args:
+        kwargs['encoding'] = 'utf-8'
     return _open(*args, **kwargs)
 
 class error:
