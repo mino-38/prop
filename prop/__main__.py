@@ -55,6 +55,12 @@ urllib3.disable_warnings(InsecureRequestWarning)
 VERSION = parse("1.2.8")
 
 
+_open = open
+
+def open(*args, **kwargs):
+    kwargs['encoding'] = 'utf-8'
+    return _open(*args, **kwargs)
+
 class error:
     @staticmethod
     def print(msg):
