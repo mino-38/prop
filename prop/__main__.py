@@ -854,34 +854,10 @@ request urls: {}
                     else:
                         break
 
-    if platform.system() == 'Windows':
-        def receive(self):
-            result = msvcrt.getch()
-            return str(result).lower()
-    else:
-        def receive(self):
-            fd = sys.stdin.fileno()
-            old = termios.tcgetattr(fd)
-            new = termios.tcgetattr(fd)
-            new[3] &= ~termios.ICANON
-            new[3] &= ~termios.ECHO
-            try:
-                termios.tcsetattr(fd, termios.TCSANOW, new)
-                result = sys.stdin.read(1).lower()
-            finally:
-                termios.tcsetattr(fd, termios.TCSANOW, old)
-            return result
-
     def ask_continue(self, msg) -> bool:
         while True:
             tqdm.write(f'{msg}[y/N]\n')
-            res = ''
-            answer = self.receive()
-            while answer != '\n':
-                res += answer
-                tqdm.write(answer, end='')
-                sys.stdout.flush()
-                answer = self.receive()
+            answer = sys.stdin.readline()
             if res in {'y', 'n', 'yes', 'no'}:
                 break
             print('\033[1A\r', end='')
